@@ -1,0 +1,885 @@
+/* ---------------------------------------------------------------------
+   Design tokens — white + purple neobank theme. See NOTES.md for the
+   full design rationale and history of earlier passes.
+   --------------------------------------------------------------------- */
+:root {
+  --bezel: #1c1c22; /* phone hardware stays dark regardless of app theme */
+  --paper: #ffffff;
+  --surface: #f5f3fb;
+  --surface-raised: #ece8f8;
+  --hairline: rgba(26, 21, 35, 0.1);
+  --ink: #1a1523;
+  --ink-soft: rgba(26, 21, 35, 0.62);
+  --ink-faint: rgba(26, 21, 35, 0.4);
+
+  --purple: #7b2ff7;
+  --purple-deep: #5b1fc2;
+  --purple-soft: rgba(123, 47, 247, 0.12);
+  --on-purple: #ffffff;
+  --danger: #e1483d;
+  --danger-soft: rgba(225, 72, 61, 0.12);
+
+  --radius-lg: 26px;
+  --radius-md: 16px;
+  --radius-sm: 10px;
+  --font-display: 'Clash Display', 'General Sans', system-ui, sans-serif;
+  --font-ui: 'General Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: #f0eef7;
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--purple);
+}
+
+:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+button {
+  font-family: var(--font-ui);
+}
+
+/* ---------------------------------------------------------------------
+   Page shell (the page around the phone)
+   --------------------------------------------------------------------- */
+.app-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 56px;
+  gap: 18px;
+}
+
+.app-page-heading {
+  text-align: center;
+  max-width: 420px;
+}
+
+.app-page-heading h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.app-page-heading p {
+  color: var(--ink-soft);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------------
+   Phone frame — hardware bezel stays dark on purpose (real devices don't
+   recolor themselves to match the app inside); the screen content below
+   carries the white + purple theme. Generic shape: no device branding.
+   --------------------------------------------------------------------- */
+.phone {
+  position: relative;
+  width: 380px;
+  max-width: 100%;
+  height: 780px;
+  max-height: 86vh;
+  background: linear-gradient(160deg, #26262d, var(--bezel));
+  border-radius: 52px;
+  padding: 14px;
+  box-shadow:
+    0 40px 80px rgba(20, 10, 40, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.phone::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 140px;
+  width: 3px;
+  height: 56px;
+  background: #33343a;
+  border-radius: 2px;
+}
+
+.phone::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 190px;
+  width: 3px;
+  height: 90px;
+  background: #33343a;
+  border-radius: 2px;
+}
+
+.phone-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--paper);
+  border-radius: 38px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.phone-island {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 84px;
+  height: 22px;
+  background: var(--bezel);
+  border-radius: 999px;
+  z-index: 50;
+}
+
+.phone-home-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 4px;
+  background: rgba(26, 21, 35, 0.25);
+  border-radius: 999px;
+  z-index: 50;
+}
+
+.phone-content {
+  flex: 1;
+  padding: 46px 16px 26px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.phone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.phone-header h1 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ink);
+}
+
+.phone-header .wallet-address {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+/* ---------------------------------------------------------------------
+   Wallet connect
+   --------------------------------------------------------------------- */
+.wallet-box {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  margin: 16px 0;
+}
+
+.wallet-address {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+/* ---------------------------------------------------------------------
+   Generic panel / card surfaces
+   --------------------------------------------------------------------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.panel h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ---------------------------------------------------------------------
+   Main wallet page (carousel card 0)
+   --------------------------------------------------------------------- */
+.balance-pair {
+  display: flex;
+  gap: 22px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.wallet-balance-label {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  margin: 4px 0 2px;
+}
+
+.wallet-balance-amount {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2.2rem;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--ink);
+}
+
+.balance-amount-secondary {
+  font-size: 1.4rem;
+  color: var(--ink-soft);
+}
+
+.wallet-balance-amount span {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 0.95rem;
+  color: var(--ink-faint);
+  margin-left: 6px;
+}
+
+.agents-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--purple-soft);
+  color: var(--purple-deep);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin: 10px 0 0;
+}
+.agents-active-pill .dot-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--purple);
+}
+
+input[type='number'],
+input[type='text'] {
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  background: var(--paper);
+  color: var(--ink);
+}
+input::placeholder {
+  color: var(--ink-faint);
+  font-family: var(--font-ui);
+}
+
+.row input[type='number'] {
+  width: 100px;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: var(--purple);
+  color: var(--on-purple);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+button.secondary {
+  background: var(--paper);
+  color: var(--purple-deep);
+  border: 1px solid var(--hairline);
+}
+
+.add-agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.add-agent-form input[type='text'] {
+  width: 100%;
+}
+
+.network-warning {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid rgba(225, 72, 61, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.85rem;
+}
+
+.hint {
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Carousel — one horizontal stack of cards: main wallet + one per agent.
+   Circular: each card gets a solid opaque background so the active card
+   fully occludes whatever peeks behind it (rather than showing through).
+   --------------------------------------------------------------------- */
+.carousel {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.carousel-stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-card {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border-radius: var(--radius-lg);
+  transition: transform 0.28s cubic-bezier(0.2, 0.7, 0.3, 1), opacity 0.28s ease;
+  will-change: transform;
+}
+.carousel-card.dragging {
+  transition: none;
+}
+
+.carousel-card-inner {
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 6px;
+  border-radius: var(--radius-lg);
+}
+
+.carousel-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding-top: 10px;
+  flex-shrink: 0;
+}
+
+.carousel-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 1.1rem;
+  border: 1px solid var(--hairline);
+}
+.carousel-arrow:disabled {
+  opacity: 0.25;
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 6px;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hairline);
+  cursor: pointer;
+}
+.dot.active {
+  background: var(--purple);
+  width: 16px;
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------------
+   Agent card (one carousel page) — same light surface + purple/red accent
+   pair as every other card, for one consistent palette across the phone.
+   --------------------------------------------------------------------- */
+.agent-card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+}
+
+.agent-card.revoked {
+  background: var(--danger-soft);
+}
+
+.agent-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.agent-chip {
+  color: var(--purple);
+}
+
+.agent-status {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--purple-soft);
+  color: var(--purple-deep);
+  font-weight: 600;
+}
+.agent-card.revoked .agent-status {
+  background: rgba(225, 72, 61, 0.18);
+  color: var(--danger);
+}
+
+.agent-number {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+  margin: 14px 0 0;
+}
+
+.agent-budget-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  margin: 16px 0 6px;
+}
+.agent-budget-row strong {
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.budget-bar-track {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+.budget-bar-fill {
+  height: 100%;
+  background: var(--purple);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.budget-bar-fill.high {
+  background: var(--danger);
+}
+
+.agent-window {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+  margin: 8px 0 0;
+}
+
+.agent-controls {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.revoke-button {
+  align-self: flex-start;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+}
+.revoke-button.is-revoked {
+  border-color: var(--purple);
+  color: var(--purple-deep);
+}
+
+.agent-controls-title {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin: 14px 0 4px;
+}
+
+.merchant-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-top: 1px solid var(--hairline);
+}
+.merchant-row:first-of-type {
+  border-top: none;
+}
+
+.merchant-row-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.merchant-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-raised);
+  flex-shrink: 0;
+}
+.merchant-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.merchant-icon-fallback {
+  color: var(--ink-faint);
+}
+
+/* Real toggle switches */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 23px;
+  flex-shrink: 0;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-raised);
+  border-radius: 999px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+  border: 1px solid var(--hairline);
+}
+.switch-track::before {
+  content: '';
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  left: 3px;
+  top: 3px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(26, 21, 35, 0.25);
+}
+.switch input:checked + .switch-track {
+  background: var(--purple);
+  border-color: var(--purple);
+}
+.switch input:checked + .switch-track::before {
+  background: #ffffff;
+  transform: translateX(17px);
+}
+.switch input:disabled + .switch-track {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------
+   Approval modal (rendered inside the phone screen)
+   --------------------------------------------------------------------- */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 21, 35, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 200;
+  border-radius: 38px;
+}
+
+.modal-sheet {
+  background: var(--paper);
+  width: 100%;
+  border-radius: 24px 24px 0 0;
+  padding: 26px 22px 34px;
+  text-align: center;
+  border-top: 1px solid var(--hairline);
+}
+
+.modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.modal-icon-neutral {
+  background: var(--purple-soft);
+  color: var(--purple);
+}
+.modal-icon-success {
+  background: var(--purple-soft);
+  color: var(--purple);
+}
+.modal-icon-error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.modal-sheet h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+.modal-action {
+  font-weight: 500;
+  margin: 0 0 6px;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
+.modal-hint {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.modal-error-reason {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin: 4px 0;
+}
+
+.modal-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+.modal-close {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Storefront — same token system, full-width web page (not phone-framed)
+   --------------------------------------------------------------------- */
+.storefront {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  color: var(--ink);
+}
+@media (min-width: 900px) {
+  .storefront {
+    max-width: 720px;
+  }
+}
+
+.storefront header h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+.storefront header {
+  margin-bottom: 18px;
+}
+.storefront h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.merchant-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 480px) {
+  .merchant-tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.merchant-tile {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.merchant-tile .merchant-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+}
+.merchant-tile-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.budget-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+}
+.budget-summary strong {
+  font-size: 1.3rem;
+  color: var(--purple);
+}
+
+.feed-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+.feed-row:first-child {
+  border-top: none;
+}
+
+.feed-row-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.feed-row-main {
+  min-width: 0;
+}
+
+.feed-row-title {
+  font-size: 0.92rem;
+  margin: 0 0 2px;
+}
+
+.feed-row-reason {
+  font-size: 0.8rem;
+  color: var(--danger);
+  margin: 0;
+}
+
+.feed-row-right {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+
+.status-pill {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+.status-pill.ok {
+  background: var(--purple-soft);
+  color: var(--purple-deep);
+}
+.status-pill.refused {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.pause-banner {
+  background: var(--purple);
+  color: #ffffff;
+  border: none;
+}
+.pause-banner h2 {
+  color: #ffffff;
+}
+.pause-banner button {
+  background: #ffffff;
+  color: var(--purple-deep);
+  margin-top: 12px;
+}

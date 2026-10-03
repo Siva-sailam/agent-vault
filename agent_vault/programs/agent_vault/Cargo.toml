@@ -1,0 +1,53 @@
+[package]
+name = "agent_vault"
+version = "0.1.0"
+description = "Created with Anchor"
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "agent_vault"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = ["spl-associated-token-account/no-entrypoint"]
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+
+[[example]]
+name = "devnet_demo_payment"
+required-features = ["no-entrypoint"]
+
+[[example]]
+name = "agent_pay"
+required-features = ["no-entrypoint"]
+
+[dependencies]
+anchor-lang = "=1.1.2"
+anchor-spl = "=1.1.2"
+
+[dev-dependencies]
+litesvm = "0.10.0"
+litesvm-token = "0.10.0"
+solana-message = "3.0.1"
+solana-transaction = "3.0.2"
+solana-signer = "3.0.0"
+solana-keypair = "3.0.1"
+solana-clock = "3.0"
+solana-client = "3"
+solana-signature = "3"
+solana-commitment-config = "3"
+solana-rpc-client-api = "3"
+solana-transaction-status-client-types = "3"
+spl-associated-token-account = "8"
+anyhow = "1"
+
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

@@ -1,0 +1,24 @@
+# Demo keypairs generated for M5 (devnet only) — these hold private keys
+# and must never be committed.
+keys/
+
+# Build output (target/deploy holds the program keypair)
+target/
+dist/
+
+# Keypairs and secrets
+*-keypair.json
+id.json
+.env*
+
+# Dependencies and local tooling
+node_modules/
+.anchor/
+test-ledger/
+.surfpool/
+.yarn/
+**/*.rs.bk
+
+# Logs and OS junk
+*.log
+.DS_Store

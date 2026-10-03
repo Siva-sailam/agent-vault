@@ -1,0 +1,874 @@
+{
+  "address": "B4YLQmwWCt8fPu23hhpEeV4LZSkoKHsWQtWk15kc8Ajj",
+  "metadata": {
+    "name": "agent_vault",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "add_agent",
+      "discriminator": [
+        214,
+        206,
+        14,
+        110,
+        178,
+        131,
+        218,
+        45
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "rules"
+          ]
+        },
+        {
+          "name": "rules",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "rules.mint",
+                "account": "VaultRules"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "agent",
+          "type": "pubkey"
+        },
+        {
+          "name": "weekly_budget",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "add_merchant",
+      "discriminator": [
+        198,
+        82,
+        166,
+        156,
+        165,
+        93,
+        203,
+        72
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "rules"
+          ]
+        },
+        {
+          "name": "rules",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "rules.mint",
+                "account": "VaultRules"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "agent",
+          "type": "pubkey"
+        },
+        {
+          "name": "merchant",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "agent_spend",
+      "discriminator": [
+        23,
+        170,
+        137,
+        159,
+        219,
+        53,
+        9,
+        61
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "docs": [
+            "The agent itself signs — this is the \"card\" being presented."
+          ],
+          "signer": true
+        },
+        {
+          "name": "rules",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "rules.owner",
+                "account": "VaultRules"
+              },
+              {
+                "kind": "account",
+                "path": "rules.mint",
+                "account": "VaultRules"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vault_authority",
+          "docs": [
+            "address is re-derived from the seeds and checked against the bump",
+            "stored on `rules` at vault creation, so it cannot be swapped for an",
+            "attacker-controlled account."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "rules"
+              }
+            ]
+          }
+        },
+        {
+          "name": "destination",
+          "docs": [
+            "Must appear in the spending agent's `merchants` allow-list (checked",
+            "in the handler, since that list lives on `rules`, not here)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit",
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "rules"
+          ]
+        },
+        {
+          "name": "rules",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "rules.mint",
+                "account": "VaultRules"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "owner_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize_vault",
+      "discriminator": [
+        48,
+        191,
+        163,
+        44,
+        71,
+        129,
+        63,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The single mint this vault will ever hold. Immutable after creation."
+          ]
+        },
+        {
+          "name": "rules",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_authority",
+          "docs": [
+            "outgoing token transfers out of `vault` in `agent_spend`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "rules"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "rules"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "remove_merchant",
+      "discriminator": [
+        55,
+        213,
+        255,
+        172,
+        106,
+        179,
+        207,
+        38
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "rules"
+          ]
+        },
+        {
+          "name": "rules",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "rules.mint",
+                "account": "VaultRules"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "agent",
+          "type": "pubkey"
+        },
+        {
+          "name": "merchant",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_agent_revoked",
+      "discriminator": [
+        58,
+        224,
+        77,
+        75,
+        56,
+        114,
+        108,
+        131
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "rules"
+          ]
+        },
+        {
+          "name": "rules",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "rules.mint",
+                "account": "VaultRules"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "agent",
+          "type": "pubkey"
+        },
+        {
+          "name": "revoked",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "rules"
+          ]
+        },
+        {
+          "name": "rules",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  117,
+                  108,
+                  101,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "rules.mint",
+                "account": "VaultRules"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vault_authority",
+          "docs": [
+            "`agent_spend`."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "rules"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "VaultRules",
+      "discriminator": [
+        63,
+        114,
+        185,
+        16,
+        23,
+        69,
+        250,
+        54
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AgentSlotsFull",
+      "msg": "Vault already has the maximum number of agents registered"
+    },
+    {
+      "code": 6001,
+      "name": "AgentAlreadyRegistered",
+      "msg": "This pubkey is already registered as an agent on this vault"
+    },
+    {
+      "code": 6002,
+      "name": "ZeroBudget",
+      "msg": "Weekly budget must be greater than zero"
+    },
+    {
+      "code": 6003,
+      "name": "AgentNotFound",
+      "msg": "Signer is not a registered agent on this vault"
+    },
+    {
+      "code": 6004,
+      "name": "AgentRevoked",
+      "msg": "This agent has been revoked and cannot spend"
+    },
+    {
+      "code": 6005,
+      "name": "BudgetExceeded",
+      "msg": "Spend amount exceeds the agent's remaining budget for this window"
+    },
+    {
+      "code": 6006,
+      "name": "MerchantNotAllowed",
+      "msg": "Destination is not on this agent's merchant allow-list"
+    },
+    {
+      "code": 6007,
+      "name": "MerchantSlotsFull",
+      "msg": "This agent already has the maximum number of merchants allow-listed"
+    },
+    {
+      "code": 6008,
+      "name": "MerchantAlreadyAllowed",
+      "msg": "This merchant is already allow-listed for this agent"
+    },
+    {
+      "code": 6009,
+      "name": "MerchantNotFound",
+      "msg": "This merchant is not on this agent's allow-list"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidMerchant",
+      "msg": "Merchant pubkey cannot be the default (empty) pubkey"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientVaultBalance",
+      "msg": "Vault does not hold enough tokens to cover this withdrawal"
+    }
+  ],
+  "types": [
+    {
+      "name": "Agent",
+      "docs": [
+        "One registered agent and its spending rules.",
+        "",
+        "`merchants` and `revoked` are part of the full v1 layout required by M4",
+        "(merchant allow-list + revoke toggle) but are not enforced or mutated by",
+        "any M3 instruction. Reserving the space now means M4 never has to",
+        "reallocate `VaultRules`."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "docs": [
+              "Agent's signing pubkey. `Pubkey::default()` means the slot is unused."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "weekly_budget",
+            "docs": [
+              "Max total spend allowed within a rolling 7-day window."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "spent_so_far",
+            "docs": [
+              "Amount spent so far in the current window."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "window_start",
+            "docs": [
+              "Unix timestamp the current window started."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "revoked",
+            "docs": [
+              "M4: when true, agent_spend must refuse this agent. Unused in M3."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "merchants",
+            "docs": [
+              "M4: allow-listed destination token accounts. Unused in M3 —",
+              "always `Pubkey::default()` for all 4 slots."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                4
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultRules",
+      "docs": [
+        "Per-vault configuration and agent roster. One `VaultRules` account is",
+        "created per (owner, mint) pair and PDA-owns exactly one token account",
+        "(the vault) holding funds for that mint."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "docs": [
+              "The human who created the vault and who can add agents / deposit."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "The SPL mint this vault holds. Fixed at creation (one vault = one token)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "docs": [
+              "The vault's token account (owned by the `vault_authority` PDA)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Bump for this `VaultRules` PDA (seeds: [RULES_SEED, owner, mint])."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "docs": [
+              "Bump for the vault token account PDA (seeds: [VAULT_SEED, rules])."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "vault_authority_bump",
+            "docs": [
+              "Bump for the vault_authority PDA that signs outgoing transfers",
+              "(seeds: [VAULT_AUTHORITY_SEED, rules])."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "agent_count",
+            "docs": [
+              "Number of populated entries in `agents` (0..=MAX_AGENTS)."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "agents",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "Agent"
+                  }
+                },
+                2
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "RULES_SEED",
+      "type": "bytes",
+      "value": "[114, 117, 108, 101, 115]"
+    },
+    {
+      "name": "VAULT_AUTHORITY_SEED",
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116, 121]"
+    },
+    {
+      "name": "VAULT_SEED",
+      "type": "bytes",
+      "value": "[118, 97, 117, 108, 116]"
+    }
+  ]
+}
