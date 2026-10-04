@@ -69,7 +69,8 @@
         ]
       },
       {
-        "pause": "Go to the control panel and switch Noonly OFF for the food-ordering agent, then press Continue."
+        "pause": "Go to the control panel and switch Noonly OFF for the food-ordering agent. This continues by itself once the change lands.",
+        "until": { "merchantOff": "Noonly" }
       },
       {
         "spend": [
@@ -78,7 +79,8 @@
         ]
       },
       {
-        "pause": "Go to the control panel and revoke the food-ordering agent, then press Continue."
+        "pause": "Go to the control panel and revoke the food-ordering agent. This continues by itself once the change lands.",
+        "until": { "revoked": true }
       },
       {
         "spend": [

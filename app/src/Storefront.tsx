@@ -11,6 +11,7 @@ type AgentEvent =
       id: number;
       ts: number;
       kind: 'spend';
+      agent?: string;
       merchant: string;
       merchantLabel: string;
       amount: number;
@@ -46,6 +47,98 @@ function useAgentEvents() {
   return { events, connected };
 }
 
+type Meta = {
+  symbol: string;
+  agents: { name: string; merchants: string[] }[];
+  merchants: string[];
+  scenario: boolean;
+};
+
+/** What the order form may offer — read from the agent service so the form and
+ * the service always agree. Re-fetched whenever the service (re)connects. */
+function useMeta(connected: boolean) {
+  const [meta, setMeta] = useState<Meta | null>(null);
+  useEffect(() => {
+    if (!connected) return;
+    fetch(`${AGENT_SERVICE_URL}/meta`)
+      .then((r) => r.json())
+      .then(setMeta)
+      .catch(() => setMeta(null));
+  }, [connected]);
+  return meta;
+}
+
+function OrderForm({ meta }: { meta: Meta }) {
+  const [agent, setAgent] = useState(meta.agents[0]?.name ?? '');
+  const [merchant, setMerchant] = useState(meta.agents[0]?.merchants[0] ?? meta.merchants[0] ?? '');
+  const [amount, setAmount] = useState('20');
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function pickAgent(name: string) {
+    setAgent(name);
+    const first = meta.agents.find((a) => a.name === name)?.merchants[0];
+    if (first) setMerchant(first);
+  }
+
+  async function placeOrder() {
+    setPending(true);
+    setError(null);
+    try {
+      const res = await fetch(`${AGENT_SERVICE_URL}/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent, merchant, amount: Number(amount) }),
+      });
+      const body = await res.json();
+      // A payment the program refuses is a normal result and shows up in the
+      // activity feed below; only a rejected request is an error here.
+      if (!res.ok) setError(body.error ?? 'Order failed');
+    } catch {
+      setError('Could not reach the agent service.');
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <h2>Place an order</h2>
+      <p className="hint">The agent signs the payment itself. The vault's rules decide whether it goes through.</p>
+      <div className="add-agent-form">
+        <select value={agent} onChange={(e) => pickAgent(e.target.value)} disabled={pending}>
+          {meta.agents.map((a) => (
+            <option key={a.name} value={a.name}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        <select value={merchant} onChange={(e) => setMerchant(e.target.value)} disabled={pending}>
+          {meta.merchants.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+        <div className="row">
+          <input
+            type="number"
+            min="1"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={pending}
+            aria-label={`Amount in ${meta.symbol}`}
+          />
+          <button disabled={pending || !agent || !merchant || Number(amount) < 1} onClick={placeOrder}>
+            {pending ? 'Sending…' : `Pay ${amount || 0} ${meta.symbol}`}
+          </button>
+        </div>
+        {error && <p className="network-warning">{error}</p>}
+      </div>
+    </section>
+  );
+}
+
 async function pressContinue() {
   await fetch(`${AGENT_SERVICE_URL}/continue`, { method: 'POST' });
 }
@@ -63,6 +156,7 @@ function merchantKeyFor(label: string) {
 
 export function Storefront() {
   const { events, connected } = useAgentEvents();
+  const meta = useMeta(connected);
 
   const isPaused = useMemo(() => events[events.length - 1]?.kind === 'pause', [events]);
 
@@ -106,6 +200,8 @@ export function Storefront() {
         </div>
       </section>
 
+      {meta && <OrderForm meta={meta} />}
+
       {latestSpendState && (
         <section className="panel">
           <h2>Agent budget</h2>
@@ -138,6 +234,7 @@ export function Storefront() {
                 {e.amount} {ACTIVE_VAULT.symbol} to {e.merchantLabel}{' '}
                 <span className={`status-pill ${e.success ? 'ok' : 'refused'}`}>{e.success ? 'Paid' : 'Refused'}</span>
               </p>
+              {e.agent && <p className="hint">{e.agent}</p>}
               {!e.success && <p className="feed-row-reason">{e.reason}</p>}
             </div>
             <div className="feed-row-right">

@@ -45,6 +45,7 @@ created from the control panel ("Set up demo vault"), signed by Phantom.
 
 - Control panel: `http://localhost:5173` (default is this vault; `?vault=b` is the original Vault B).
 - Storefront: `http://localhost:5173/storefront.html`.
-- Scenario: `cd agent-service && npm start` (food-ordering-agent pays Noonly 20, Talabird 20, Zomatic 15 → pause: switch Noonly off → Noonly 5 refused → pause: revoke → Talabird 5 refused). `npm start -- --config vault-b.config.json` runs the original Vault B scenario.
+- Live orders (default): `cd agent-service && npm start`. On the storefront, pick an agent and merchant, enter an amount and click Pay. The agent service signs the payment with the agent's key (never in the browser) and the result appears in the feed: Paid, or Refused with the program's error.
+- Scripted scenario: `cd agent-service && npm run scenario` (food-ordering-agent pays Noonly 20, Talabird 20, Zomatic 15 → pause: switch Noonly off → Noonly 5 refused → pause: revoke → Talabird 5 refused). A pause continues by itself once the change is visible on-chain (the Continue button is a manual override). To re-run it, turn Noonly back on and unrevoke first, otherwise the first pause passes immediately. `--config vault-b.config.json` runs the original Vault B scenario.
 - One-off payment: `npm run agent -- --agent food-ordering-agent --merchant Noonly --amount 20`.
 - Recreate the token/keys/config: `cd scripts && npx tsx setup-agent-usd.ts` (idempotent). Keys live in `~/agent-vault/keys` (gitignored).

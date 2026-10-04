@@ -19,9 +19,9 @@
       { "spend": ["Noonly", 20] },
       { "spend": ["Talabird", 20] },
       { "spend": ["Zomatic", 15] },
-      { "pause": "Go to the control panel and switch Noonly OFF for this agent, then press Continue." },
+      { "pause": "Go to the control panel and switch Noonly OFF for this agent. This continues by itself once the change lands.", "until": { "merchantOff": "Noonly" } },
       { "spend": ["Noonly", 5] },
-      { "pause": "Go to the control panel and revoke this agent, then press Continue." },
+      { "pause": "Go to the control panel and revoke this agent. This continues by itself once the change lands.", "until": { "revoked": true } },
       { "spend": ["Talabird", 5] }
     ]
   }

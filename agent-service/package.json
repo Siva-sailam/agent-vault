@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.mjs",
+    "scenario": "node index.mjs --scenario",
     "agent": "node agent.mjs"
   },
   "dependencies": {
