@@ -16,6 +16,8 @@ export type VaultConfig = {
   title: string;
   /** Token name shown in the UI, e.g. "aUSD". */
   symbol: string;
+  /** Vault owner (the main wallet). */
+  owner: string;
   mint: string;
   merchants: MerchantDef[];
   /** Agents to register via the "Set up demo vault" button. Absent for Vault B. */
@@ -26,6 +28,7 @@ const DEMO: VaultConfig = {
   id: 'demo',
   title: 'Agentic vault',
   symbol: demo.tokenSymbol,
+  owner: demo.owner,
   mint: demo.mint,
   merchants: Object.entries(demo.merchants).map(([label, wallet]) => ({ label, wallet })),
   setupAgents: Object.entries(demo.agents).map(([name, a]) => ({
@@ -40,6 +43,7 @@ const VAULT_B: VaultConfig = {
   id: 'b',
   title: 'Agentic vault (Vault B)',
   symbol: 'Demo USD',
+  owner: '7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg',
   mint: DEMO_USD_MINT,
   merchants: MERCHANT_CATALOGUE,
 };

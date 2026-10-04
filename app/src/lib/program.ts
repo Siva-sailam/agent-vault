@@ -201,6 +201,21 @@ export function ixDeposit(
   };
 }
 
+/** Plain SPL Token `Transfer` (instruction 3): the owner pays straight from
+ * their own token account — no vault, no agent involved. */
+export function ixTokenTransfer(
+  owner: TransactionSigner,
+  source: Address,
+  destination: Address,
+  amount: bigint,
+): Instruction {
+  return {
+    programAddress: TOKEN_PROGRAM_ADDRESS,
+    accounts: [writable(source), writable(destination), ownerSigner(owner)],
+    data: concat(Uint8Array.of(3), u64Encoder.encode(amount)),
+  };
+}
+
 export function ixAddMerchant(
   payer: TransactionSigner,
   rules: Address,

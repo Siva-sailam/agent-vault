@@ -207,6 +207,7 @@ async function main() {
     symbol,
     agents: Object.keys(config.agents).map((name) => ({
       name,
+      address: agentSigners[name].address,
       merchants: config.agents[name].merchants ?? Object.keys(config.merchants),
     })),
     merchants: Object.keys(config.merchants),

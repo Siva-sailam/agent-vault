@@ -1,0 +1,741 @@
+/* Storefront theme — a neon, glassy "stablecoin pay" look. Everything is
+   scoped under .sf so the control panel's styles are untouched. */
+
+/* The shared index.css centres #root in a 1126px column; undo that here. */
+#root:has(.sf) {
+  width: 100%;
+  max-width: none;
+  border: none;
+  text-align: left;
+  display: block;
+  min-height: 100svh;
+}
+body:has(.sf) {
+  background: #0a0618;
+  margin: 0;
+}
+
+.sf {
+  --bg: #0a0618;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-strong: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.13);
+  --text: #f6f3ff;
+  --dim: #a99fd0;
+  --violet: #8b5cf6;
+  --pink: #ff4fa3;
+  --lime: #c8ff3d;
+  --cyan: #38e1ff;
+  --red: #ff5470;
+  --font-ui: 'General Sans', system-ui, sans-serif;
+  --font-display: 'Clash Display', 'General Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+.sf *,
+.sf *::before,
+.sf *::after {
+  box-sizing: border-box;
+}
+
+/* Glow blobs */
+.sf-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.sf-blob-a {
+  width: 520px;
+  height: 520px;
+  background: var(--violet);
+  top: -160px;
+  left: -120px;
+}
+.sf-blob-b {
+  width: 460px;
+  height: 460px;
+  background: var(--pink);
+  top: 30%;
+  right: -160px;
+  opacity: 0.4;
+}
+.sf-blob-c {
+  width: 380px;
+  height: 380px;
+  background: var(--cyan);
+  bottom: -160px;
+  left: 28%;
+  opacity: 0.28;
+}
+
+.sf-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+}
+
+/* Header */
+.sf-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.sf-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--lime);
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+.sf-logo {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--lime);
+  color: #12082b;
+  font-size: 1rem;
+}
+.sf .sf-header h1,
+.sf .sf-card h2 {
+  color: var(--text);
+}
+.sf-header h1 {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.7rem, 4.5vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.sf-header h1 span {
+  background: linear-gradient(90deg, var(--pink), var(--violet) 55%, var(--cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.sf-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 0.85rem;
+}
+.sf-live i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+.sf-live.on {
+  color: var(--text);
+}
+.sf-live.on i {
+  background: var(--lime);
+  box-shadow: 0 0 0 0 rgba(200, 255, 61, 0.7);
+  animation: sf-ping 1.8s infinite;
+}
+@keyframes sf-ping {
+  70% {
+    box-shadow: 0 0 0 10px rgba(200, 255, 61, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(200, 255, 61, 0);
+  }
+}
+
+/* Balances */
+.sf-balances {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.sf-balance {
+  position: relative;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+.sf-balance::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--tone);
+}
+.sf-tone-violet {
+  --tone: linear-gradient(90deg, var(--violet), var(--cyan));
+}
+.sf-tone-pink {
+  --tone: linear-gradient(90deg, var(--pink), var(--violet));
+}
+.sf-tone-lime {
+  --tone: linear-gradient(90deg, var(--lime), var(--cyan));
+}
+.sf-balance-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--dim);
+  font-size: 0.85rem;
+}
+.sf-balance-emoji {
+  font-size: 1.15rem;
+}
+.sf-balance-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-balance-value {
+  position: relative;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+  line-height: 1.1;
+}
+.sf-balance-value span {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--dim);
+}
+.sf-balance-value em {
+  position: absolute;
+  right: 0;
+  top: 0;
+  font-style: normal;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  animation: sf-pop 3.5s ease forwards;
+}
+.sf-balance-value em.down {
+  background: rgba(255, 84, 112, 0.18);
+  color: var(--red);
+}
+.sf-balance-value em.up {
+  background: rgba(200, 255, 61, 0.18);
+  color: var(--lime);
+}
+@keyframes sf-pop {
+  0% {
+    transform: translateY(8px) scale(0.8);
+    opacity: 0;
+  }
+  10% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.sf-balance-hint {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--dim);
+}
+
+/* Pause banner */
+.sf-pause {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 16px 20px;
+  border-radius: 22px;
+  background: linear-gradient(100deg, var(--pink), var(--violet));
+  box-shadow: 0 12px 40px rgba(139, 92, 246, 0.35);
+}
+.sf-pause p {
+  margin: 4px 0 0;
+  max-width: 62ch;
+}
+.sf-pause button {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: #2a0f5c;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Layout */
+.sf-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.sf-card {
+  padding: 22px;
+  border-radius: 26px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+}
+.sf-card h2 {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* Reset the control panel's global button/input styling inside .sf */
+:where(.sf) button,
+:where(.sf) input,
+:where(.sf) select {
+  font-family: inherit;
+}
+:where(.sf) button {
+  background: none;
+  color: inherit;
+  border: none;
+  margin: 0;
+  box-shadow: none;
+  min-height: 0;
+}
+.sf button:focus-visible,
+.sf input:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+
+/* Mode switch */
+.sf-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+}
+.sf-seg button {
+  padding: 11px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.sf-seg button.on {
+  background: linear-gradient(100deg, var(--violet), var(--pink));
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.sf-label {
+  display: block;
+  margin: 18px 0 8px;
+  color: var(--dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Agent pills */
+.sf-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sf-pill {
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--card-strong);
+  border: 1px solid var(--line);
+  font-weight: 500;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: transform 0.12s, background 0.15s;
+}
+.sf-pill:hover {
+  transform: translateY(-1px);
+}
+.sf-pill.on {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: #17082f;
+  font-weight: 600;
+}
+
+/* Budget */
+.sf-budget {
+  margin-top: 14px;
+}
+.sf-budget-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+.sf-budget-row strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+.sf-budget-track {
+  margin-top: 6px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.sf-budget-track div {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--lime), var(--cyan));
+  transition: width 0.5s ease;
+}
+
+/* Wallet status */
+.sf-wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--card-strong);
+  border: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+.sf-wallet.ok {
+  border-color: rgba(200, 255, 61, 0.5);
+}
+.sf-wallet.warn {
+  border-color: rgba(255, 84, 112, 0.6);
+}
+.sf-wallet small {
+  color: var(--dim);
+}
+.sf-connect {
+  padding: 11px 16px;
+  border-radius: 999px;
+  background: var(--cyan);
+  color: #05202a;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+/* Merchants */
+.sf-group + .sf-group {
+  margin-top: 12px;
+}
+.sf-group-title {
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.sf-merchants {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.sf-merchant {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--card-strong);
+  border: 1.5px solid transparent;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.15s, background 0.15s;
+}
+.sf-merchant span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sf-merchant:hover {
+  transform: translateY(-1px);
+}
+.sf-merchant.on {
+  border-color: var(--lime);
+  background: rgba(200, 255, 61, 0.1);
+}
+.sf-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  line-height: 1;
+}
+
+/* Amount */
+.sf-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+}
+.sf-amount input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 2.2rem;
+  font-weight: 600;
+  -moz-appearance: textfield;
+}
+.sf-amount input::-webkit-outer-spin-button,
+.sf-amount input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.sf-amount span {
+  color: var(--dim);
+  font-weight: 600;
+}
+.sf-quick {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.sf-quick button {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 12px;
+  background: var(--card-strong);
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+}
+.sf-quick button.on {
+  background: var(--violet);
+  border-color: var(--violet);
+}
+
+.sf-route {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.9rem;
+  color: var(--dim);
+}
+.sf-route b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Pay button */
+.sf-pay {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(100deg, var(--lime), var(--cyan));
+  color: #0c0524;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(56, 225, 255, 0.28);
+  transition: transform 0.12s, box-shadow 0.15s, opacity 0.15s;
+}
+.sf-pay:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px rgba(56, 225, 255, 0.4);
+}
+.sf-pay:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.sf-error {
+  margin: 10px 0 0;
+  color: var(--red);
+  font-size: 0.9rem;
+}
+.sf-fine,
+.sf-dim {
+  margin: 10px 0 0;
+  color: var(--dim);
+  font-size: 0.82rem;
+}
+
+/* Activity */
+.sf-empty {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 30px 10px;
+  text-align: center;
+  color: var(--dim);
+}
+.sf-empty span {
+  font-size: 2rem;
+}
+.sf-feed {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  animation: sf-in 0.35s ease;
+}
+.sf-feed + .sf-feed {
+  margin-top: 10px;
+}
+.sf-feed.bad {
+  background: rgba(255, 84, 112, 0.1);
+  border-color: rgba(255, 84, 112, 0.35);
+}
+@keyframes sf-in {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+}
+.sf-feed-title {
+  font-size: 1rem;
+}
+.sf-feed-title b {
+  font-family: var(--font-mono);
+}
+.sf-feed-title span {
+  color: var(--dim);
+}
+.sf-feed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--dim);
+}
+.sf-feed-meta a {
+  color: var(--cyan);
+  text-decoration: none;
+}
+.sf-feed-meta a:hover {
+  text-decoration: underline;
+}
+.sf-via {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+.sf-feed-reason {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 84, 112, 0.14);
+  color: #ff9db0;
+  font-size: 0.85rem;
+}
+.sf-status {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sf-status.ok {
+  background: rgba(200, 255, 61, 0.18);
+  color: var(--lime);
+}
+.sf-status.bad {
+  background: rgba(255, 84, 112, 0.2);
+  color: var(--red);
+}
+
+/* The wallet-approval modal comes from the shared styles; anchor it to the
+   viewport here since the storefront isn't inside a phone frame. */
+.sf .modal-backdrop {
+  position: fixed;
+}
+
+/* Responsive */
+@media (max-width: 880px) {
+  .sf-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .sf-shell {
+    padding: 20px 14px 48px;
+  }
+  .sf-balances {
+    grid-template-columns: 1fr;
+  }
+  .sf-card {
+    padding: 18px;
+  }
+  .sf-feed {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .sf-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sf *,
+  .sf *::before,
+  .sf *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
