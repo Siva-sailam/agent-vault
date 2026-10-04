@@ -30,13 +30,20 @@ export function CardCarousel({ pages }: { pages: ReactNode[] }) {
   }
 
   function onPointerDown(e: PointerEvent<HTMLDivElement>) {
+    // Presses on controls (buttons, links, inputs) are clicks, not swipes.
+    if ((e.target as HTMLElement).closest('button, a, input, select, textarea, label')) return;
     dragging.current = true;
     startX.current = e.clientX;
-    e.currentTarget.setPointerCapture(e.pointerId);
   }
   function onPointerMove(e: PointerEvent<HTMLDivElement>) {
     if (!dragging.current) return;
-    setDragX(e.clientX - startX.current);
+    const dx = e.clientX - startX.current;
+    // Capture the pointer only once it is clearly a drag, so plain clicks
+    // still reach the element that was pressed.
+    if (Math.abs(dx) > 6 && !e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    setDragX(dx);
   }
   function endDrag() {
     if (!dragging.current) return;
