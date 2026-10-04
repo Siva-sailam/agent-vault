@@ -13,19 +13,19 @@ export type Merchant = {
  * program's MAX_MERCHANTS_PER_AGENT. */
 export const MERCHANT_CATALOGUE: Merchant[] = [
   {
-    "label": "Noon",
+    "label": "Noonly",
     "wallet": "DFTuEQUPL2X3ZPnKd649r5iE4Dtfg9anXKRwVW7Qc3ne"
   },
   {
-    "label": "Talabat",
+    "label": "Talabird",
     "wallet": "79SqU4CSRmu6bq7QQiFet8bHLs7zJj8e4yWiTZF4F5zo"
   },
   {
-    "label": "Zomato",
+    "label": "Zomatic",
     "wallet": "4TBdAhTAKeYCSKYnc5vtrAgMDkgrHT9AoJfEmxKc8vqK"
   },
   {
-    "label": "Uber Eats",
+    "label": "Kuber Eats",
     "wallet": "2wqyxRpzQApHzdsNSz1d8HQpJD3JkhtYsZ8MVpiGE9fD"
   }
 ];

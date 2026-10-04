@@ -24,10 +24,10 @@ function publicKeyOf(fileName) {
 }
 
 const merchants = [
-  { label: 'Noon', file: 'merchant-noon.json' },
-  { label: 'Talabat', file: 'merchant-talabat.json' },
-  { label: 'Zomato', file: 'merchant-zomato.json' },
-  { label: 'Uber Eats', file: 'merchant-ubereats.json' },
+  { label: 'Noonly', file: 'merchant-noon.json' },
+  { label: 'Talabird', file: 'merchant-talabat.json' },
+  { label: 'Zomatic', file: 'merchant-zomato.json' },
+  { label: 'Kuber Eats', file: 'merchant-ubereats.json' },
 ].map(({ label, file }) => ({ label, wallet: publicKeyOf(file) }));
 
 const mint = publicKeyOf('demo-usd-mint.json');

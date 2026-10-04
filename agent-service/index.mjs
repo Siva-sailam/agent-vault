@@ -49,7 +49,7 @@ const MERCHANT_FILES = {
   zomato: 'merchant-zomato.json',
   ubereats: 'merchant-ubereats.json',
 };
-const MERCHANT_LABELS = { noon: 'Noon', talabat: 'Talabat', zomato: 'Zomato', ubereats: 'Uber Eats' };
+const MERCHANT_LABELS = { noon: 'Noonly', talabat: 'Talabird', zomato: 'Zomatic', ubereats: 'Kuber Eats' };
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -186,7 +186,7 @@ async function main() {
   await spend('zomato', 15);
 
   await waitForContinue(
-    'Go to the M6 control panel and switch Noon OFF for this agent, then press Continue.',
+    'Go to the M6 control panel and switch Noonly OFF for this agent, then press Continue.',
   );
   await spend('noon', 5);
 
