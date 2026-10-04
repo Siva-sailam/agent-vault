@@ -1,0 +1,12 @@
+{
+  "name": "agent-vault-scripts",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/mpl-toolbox": "^0.11.5",
+    "@metaplex-foundation/umi": "^1.6.0",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.6.0",
+    "tsx": "^4.23.15"
+  }
+}

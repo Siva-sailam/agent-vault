@@ -9,8 +9,11 @@ import {
 } from '../lib/program';
 import { ChipIcon } from './icons';
 import { MerchantIcon } from './MerchantIcon';
+import { ACTIVE_VAULT } from '../vaults';
 
-type RunApproval = (label: string, build: () => Promise<Instruction[]> | Instruction[]) => Promise<boolean>;
+const SYM = ACTIVE_VAULT.symbol;
+
+type RunApproval = (label: string, build: () => Promise<Instruction[] | Instruction[][]> | Instruction[] | Instruction[][]) => Promise<boolean>;
 export type MerchantRef = { key: string; label: string; ata: Address };
 
 function windowResetLabel(windowStart: number): string {
@@ -105,7 +108,7 @@ export function AgentCardView({
       </p>
       <div className="agent-budget-row">
         <span>
-          Spent <strong>{agent.spentSoFar.toString()}</strong> / {agent.weeklyBudget.toString()} Demo USD
+          Spent <strong>{agent.spentSoFar.toString()}</strong> / {agent.weeklyBudget.toString()} {SYM}
         </span>
         <span>{remaining.toString()} left</span>
       </div>

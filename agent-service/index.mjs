@@ -1,19 +1,22 @@
 #!/usr/bin/env node
-// The agent service. Holds the grocery agent's private key in this
-// process's memory only — it is read once from disk at startup and never
-// transmitted anywhere (not over the HTTP server below, not to the
-// storefront page, not anywhere). See NOTES.md "why the agent key never
-// touches the browser" for the full reasoning.
+// The agent service. Holds the agent's private key in this process's memory
+// only — it is read once from disk at startup and never transmitted anywhere
+// (not over the HTTP server below, not to the storefront page, not anywhere).
+// See NOTES.md "why the agent key never touches the browser" for the reasoning.
 //
-// Runs the M7 demo scenario against the vault owned by VAULT_OWNER,
-// pausing twice for you to make changes in the M6 control panel.
+// Runs the M7 demo scenario described in a vault config file: a list of
+// spends and pauses. At a pause it waits for you to act in the control panel
+// and press Continue on the storefront.
 //
 // Usage:
-//   node index.mjs [--agent <keyfile-in-keys-dir>] [--port <port>]
-// Defaults: --agent agent-grocery.json --port 4021
+//   node index.mjs [--config <file>] [--agent <name>] [--port <port>] [--check]
+// Defaults: --config demo-vault.config.json --port 4021; agent = the config's
+// scenario.agent. --check loads the config and prints the plan, sends nothing.
+// Use --config vault-b.config.json for the original Vault B scenario.
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   address,
   createSolanaRpc,
@@ -24,7 +27,6 @@ import {
   partiallySignTransactionMessageWithSigners,
   getBase64EncodedWireTransaction,
   createKeyPairSignerFromBytes,
-  getAddressDecoder,
 } from '@solana/kit';
 import { startServer } from './server.mjs';
 import {
@@ -38,25 +40,16 @@ import {
 
 const DEVNET_URL = 'https://api.devnet.solana.com';
 const KEYS_DIR = join(homedir(), 'agent-vault', 'keys');
-
-// The vault owner — your Phantom wallet from M6. Update if you create a
-// vault under a different owner.
-const VAULT_OWNER = address('7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg');
-
-const MERCHANT_FILES = {
-  noon: 'merchant-noon.json',
-  talabat: 'merchant-talabat.json',
-  zomato: 'merchant-zomato.json',
-  ubereats: 'merchant-ubereats.json',
-};
-const MERCHANT_LABELS = { noon: 'Noonly', talabat: 'Talabird', zomato: 'Zomatic', ubereats: 'Kuber Eats' };
+const here = dirname(fileURLToPath(import.meta.url));
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { agent: 'agent-grocery.json', port: 4021 };
+  const opts = { config: 'demo-vault.config.json', agent: null, port: 4021, check: false };
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--agent') opts.agent = args[++i];
+    if (args[i] === '--config') opts.config = args[++i];
+    else if (args[i] === '--agent') opts.agent = args[++i];
     else if (args[i] === '--port') opts.port = Number(args[++i]);
+    else if (args[i] === '--check') opts.check = true;
   }
   return opts;
 }
@@ -65,12 +58,8 @@ function readKeypairBytes(fileName) {
   return Uint8Array.from(JSON.parse(readFileSync(join(KEYS_DIR, fileName), 'utf8')));
 }
 
-/** Reads only the public-key half (bytes 32..64) of a keypair file — used
- * for merchants and the mint, where we never need to sign anything. */
-function readPublicKeyOnly(fileName) {
-  const bytes = readKeypairBytes(fileName);
-  return getAddressDecoder().decode(bytes.slice(32, 64));
-}
+/** Icon/storefront key for a merchant label: lower-case, no spaces. */
+const merchantKeyFor = (label) => label.toLowerCase().replace(/\s+/g, '');
 
 // Any other required signer (e.g. the agent, for agent_spend) is picked up
 // automatically from the instructions' own account metas — each is built
@@ -105,39 +94,64 @@ async function waitForOutcome(rpc, signature) {
 
 async function main() {
   const opts = parseArgs();
+  const config = JSON.parse(readFileSync(resolve(here, opts.config), 'utf8'));
+  const symbol = config.tokenSymbol ?? 'Demo USD';
+  const agentName = opts.agent ?? config.scenario?.agent;
+  const agentEntry = config.agents?.[agentName];
+  const agentFile = typeof agentEntry === 'string' ? agentEntry : agentEntry?.keyFile;
+  if (!agentFile) throw new Error(`Unknown agent "${agentName}" in ${opts.config}`);
+  const steps = config.scenario?.steps ?? [];
+  for (const s of steps) {
+    if (s.spend && !config.merchants[s.spend[0]]) throw new Error(`Scenario merchant "${s.spend[0]}" is not in the config`);
+  }
+
+  const mint = address(config.mint);
+  const owner = address(config.owner);
+  const merchantAtas = {};
+  for (const [label, wallet] of Object.entries(config.merchants)) {
+    merchantAtas[label] = await getAssociatedTokenAddress(address(wallet), mint);
+  }
+  const pdas = await getVaultPdas(owner, mint);
+
+  console.log('Config:     ', opts.config, `(${config.name ?? 'unnamed'})`);
+  console.log('Agent:      ', agentName);
+  console.log('Vault owner:', owner);
+  console.log('Mint:       ', mint);
+  console.log('Rules PDA:  ', pdas.rules);
+  console.log('Vault:      ', pdas.vault);
+  console.log('Scenario:');
+  steps.forEach((s, i) => console.log(`  ${i + 1}. ${s.spend ? `${agentName} pays ${s.spend[0]} ${s.spend[1]} ${symbol}` : `PAUSE — ${s.pause}`}`));
+  console.log();
+  if (opts.check) {
+    console.log('--check: nothing sent.');
+    return;
+  }
+
   const rpc = createSolanaRpc(DEVNET_URL);
   const { emit, waitForContinue } = startServer(opts.port);
-
-  const agentSigner = await createKeyPairSignerFromBytes(readKeypairBytes(opts.agent));
+  const agentSigner = await createKeyPairSignerFromBytes(readKeypairBytes(agentFile));
   const feePayerSigner = await createKeyPairSignerFromBytes(
     Uint8Array.from(JSON.parse(readFileSync(join(homedir(), '.config', 'solana', 'id.json'), 'utf8'))),
   );
-  const mint = readPublicKeyOnly('demo-usd-mint.json');
-
-  console.log('Agent:      ', agentSigner.address);
+  console.log('Agent key:  ', agentSigner.address);
   console.log('Fee payer:  ', feePayerSigner.address);
-  console.log('Vault owner:', VAULT_OWNER);
-  console.log('Mint:       ', mint);
-
-  const pdas = await getVaultPdas(VAULT_OWNER, mint);
-  console.log('Rules PDA:  ', pdas.rules);
-  console.log('Vault:      ', pdas.vault);
   console.log();
 
-  const merchantWallets = {};
-  const merchantAtas = {};
-  for (const [key, file] of Object.entries(MERCHANT_FILES)) {
-    merchantWallets[key] = readPublicKeyOnly(file);
-    merchantAtas[key] = await getAssociatedTokenAddress(merchantWallets[key], mint);
+  // Merchant token accounts: only create the ones that are missing (a
+  // transaction is sent only if something is actually missing).
+  const missing = [];
+  for (const [label, ata] of Object.entries(merchantAtas)) {
+    const info = await rpc.getAccountInfo(ata, { encoding: 'base64' }).send();
+    if (!info.value) missing.push(label);
   }
-
-  console.log('Ensuring all 4 merchant token accounts exist (idempotent, one-time)...');
-  const ensureIxs = Object.keys(MERCHANT_FILES).map((key) =>
-    ixEnsureAssociatedTokenAccount(feePayerSigner, merchantWallets[key], mint, merchantAtas[key]),
-  );
-  const setupSig = await sendInstructions(rpc, feePayerSigner, ensureIxs);
-  console.log('  tx:', setupSig);
-  console.log();
+  if (missing.length > 0) {
+    console.log(`Creating ${missing.length} missing merchant token account(s) (idempotent)...`);
+    const ensureIxs = missing.map((label) =>
+      ixEnsureAssociatedTokenAccount(feePayerSigner, address(config.merchants[label]), mint, merchantAtas[label]),
+    );
+    console.log('  tx:', await sendInstructions(rpc, feePayerSigner, ensureIxs));
+    console.log();
+  }
 
   async function currentSpent() {
     const info = await rpc.getAccountInfo(pdas.rules, { encoding: 'base64' }).send();
@@ -147,11 +161,9 @@ async function main() {
     return rules.agents.find((a) => a.key === agentSigner.address) ?? null;
   }
 
-  async function spend(merchantKey, amount) {
-    const label = MERCHANT_LABELS[merchantKey];
-    const destination = merchantAtas[merchantKey];
-    console.log(`Agent ordering from ${label} — ${amount} Demo USD...`);
-    const ix = ixAgentSpend(agentSigner, pdas.rules, pdas.vault, pdas.vaultAuthority, destination, BigInt(amount));
+  async function spend(label, amount) {
+    console.log(`Agent ordering from ${label} — ${amount} ${symbol}...`);
+    const ix = ixAgentSpend(agentSigner, pdas.rules, pdas.vault, pdas.vaultAuthority, merchantAtas[label], BigInt(amount));
     const signature = await sendInstructions(rpc, feePayerSigner, [ix]);
     const err = await waitForOutcome(rpc, signature);
     const solscanUrl = `https://solscan.io/tx/${signature}?cluster=devnet`;
@@ -167,7 +179,7 @@ async function main() {
     console.log();
 
     emit('spend', {
-      merchant: merchantKey,
+      merchant: merchantKeyFor(label),
       merchantLabel: label,
       amount,
       success,
@@ -181,17 +193,10 @@ async function main() {
 
   emit('info', { message: `Demo scenario starting. Agent: ${agentSigner.address}` });
 
-  await spend('noon', 20);
-  await spend('talabat', 20);
-  await spend('zomato', 15);
-
-  await waitForContinue(
-    'Go to the M6 control panel and switch Noonly OFF for this agent, then press Continue.',
-  );
-  await spend('noon', 5);
-
-  await waitForContinue('Go to the M6 control panel and revoke this agent, then press Continue.');
-  await spend('talabat', 5);
+  for (const step of steps) {
+    if (step.spend) await spend(step.spend[0], step.spend[1]);
+    else await waitForContinue(step.pause);
+  }
 
   emit('complete', { message: 'Scenario complete.' });
   console.log('Scenario complete. Service is still running for the storefront feed — Ctrl+C to stop.');

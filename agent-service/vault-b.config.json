@@ -1,14 +1,28 @@
 {
+  "name": "Vault B (original Demo USD)",
   "owner": "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
   "mint": "3txU6ZAzx6oAMhFMd9CjuRTFB9YkCYvnYSZeFfLK19ec",
+  "tokenSymbol": "Demo USD",
   "agents": {
-    "agent-grocery": "agent-grocery.json",
-    "agent-second": "agent-second.json"
+    "agent-grocery": { "keyFile": "agent-grocery.json" },
+    "agent-second": { "keyFile": "agent-second.json" }
   },
   "merchants": {
     "Noonly": "DFTuEQUPL2X3ZPnKd649r5iE4Dtfg9anXKRwVW7Qc3ne",
     "Talabird": "79SqU4CSRmu6bq7QQiFet8bHLs7zJj8e4yWiTZF4F5zo",
     "Zomatic": "4TBdAhTAKeYCSKYnc5vtrAgMDkgrHT9AoJfEmxKc8vqK",
     "Kuber Eats": "2wqyxRpzQApHzdsNSz1d8HQpJD3JkhtYsZ8MVpiGE9fD"
+  },
+  "scenario": {
+    "agent": "agent-grocery",
+    "steps": [
+      { "spend": ["Noonly", 20] },
+      { "spend": ["Talabird", 20] },
+      { "spend": ["Zomatic", 15] },
+      { "pause": "Go to the control panel and switch Noonly OFF for this agent, then press Continue." },
+      { "spend": ["Noonly", 5] },
+      { "pause": "Go to the control panel and revoke this agent, then press Continue." },
+      { "spend": ["Talabird", 5] }
+    ]
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MERCHANT_CATALOGUE } from './catalogue';
+import { ACTIVE_VAULT } from './vaults';
 import { MerchantIcon } from './components/MerchantIcon';
 import './App.css';
 
@@ -54,6 +54,9 @@ function timeLabel(ts: number) {
   return new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+// The merchants shown: the demo vault's scenario agent's own four, else the catalogue.
+const tileLabels = ACTIVE_VAULT.setupAgents?.[0].merchants ?? ACTIVE_VAULT.merchants.map((m) => m.label);
+
 function merchantKeyFor(label: string) {
   return label.toLowerCase().replace(/\s+/g, '');
 }
@@ -94,10 +97,10 @@ export function Storefront() {
 
       <section>
         <div className="merchant-tiles">
-          {MERCHANT_CATALOGUE.map((m) => (
-            <div key={m.label} className="merchant-tile">
-              <MerchantIcon merchantKey={merchantKeyFor(m.label)} size={44} />
-              <span className="merchant-tile-label">{m.label}</span>
+          {tileLabels.map((label) => (
+            <div key={label} className="merchant-tile">
+              <MerchantIcon merchantKey={merchantKeyFor(label)} size={44} />
+              <span className="merchant-tile-label">{label}</span>
             </div>
           ))}
         </div>
@@ -110,7 +113,7 @@ export function Storefront() {
             <span>Spent this window</span>
             <strong>
               {latestSpendState.spentSoFar}
-              {latestSpendState.weeklyBudget != null && <> / {latestSpendState.weeklyBudget}</>} Demo USD
+              {latestSpendState.weeklyBudget != null && <> / {latestSpendState.weeklyBudget}</>} {ACTIVE_VAULT.symbol}
             </strong>
           </div>
         </section>
@@ -132,7 +135,7 @@ export function Storefront() {
             <MerchantIcon merchantKey={e.merchant} size={34} />
             <div className="feed-row-main">
               <p className="feed-row-title">
-                {e.amount} Demo USD to {e.merchantLabel}{' '}
+                {e.amount} {ACTIVE_VAULT.symbol} to {e.merchantLabel}{' '}
                 <span className={`status-pill ${e.success ? 'ok' : 'refused'}`}>{e.success ? 'Paid' : 'Refused'}</span>
               </p>
               {!e.success && <p className="feed-row-reason">{e.reason}</p>}

@@ -10,20 +10,20 @@ import { PhoneFrame } from './components/PhoneFrame';
 import { CardCarousel } from './components/CardCarousel';
 import { useVaultState } from './hooks/useVaultState';
 import { useApprovalAction } from './hooks/useApprovalAction';
-import { MERCHANT_CATALOGUE, DEMO_USD_MINT } from './catalogue';
+import { ACTIVE_VAULT, merchantKeyOf, merchantLabelsFor } from './vaults';
 import { getAssociatedTokenAddress } from './lib/program';
 import type { AppClient } from './providers';
 import './App.css';
 
-const MINT = address(DEMO_USD_MINT);
+const MINT = address(ACTIVE_VAULT.mint);
 
 function useMerchantRefs(mint: Address): MerchantRef[] {
   const [refs, setRefs] = useState<MerchantRef[]>([]);
   useEffect(() => {
     let cancelled = false;
     Promise.all(
-      MERCHANT_CATALOGUE.map(async (m) => ({
-        key: m.label.toLowerCase().replace(/\s+/g, ''),
+      ACTIVE_VAULT.merchants.map(async (m) => ({
+        key: merchantKeyOf(m.label),
         label: m.label,
         ata: await getAssociatedTokenAddress(address(m.wallet), mint),
       })),
@@ -72,7 +72,7 @@ function Dashboard({ client }: { client: AppClient }) {
         payer={client.payer}
         rulesAddress={vault.pdas!.rules}
         agent={agent}
-        merchants={merchants}
+        merchants={merchants.filter((m) => merchantLabelsFor(agent.key).includes(m.label))}
         runApproval={approval.run}
         onChanged={vault.refresh}
       />
@@ -96,7 +96,7 @@ export function App() {
   return (
     <div className="app-page">
       <div className="app-page-heading">
-        <h1>Agentic vault</h1>
+        <h1>{ACTIVE_VAULT.title}</h1>
         <p>Devnet only. Every action is signed by your connected wallet.</p>
       </div>
       <PhoneFrame>

@@ -9,8 +9,8 @@
 // Options:
 //   --agent     agent name from the config (e.g. food-ordering-agent)
 //   --merchant  merchant name from the config (case-insensitive)
-//   --amount    whole Demo USD units
-//   --config    config file (default: vault-b.config.json, or $AGENT_VAULT_CONFIG)
+//   --amount    whole token units (Demo USD / aUSD)
+//   --config    config file (default: demo-vault.config.json, or $AGENT_VAULT_CONFIG)
 //
 // The config holds public addresses and key FILE NAMES only. The agent key
 // is read from ~/agent-vault/keys into this process and never printed.
@@ -52,7 +52,7 @@ const fail = (msg) => {
   process.exit(2);
 };
 
-const configPath = resolve(here, opt('config') ?? process.env.AGENT_VAULT_CONFIG ?? 'vault-b.config.json');
+const configPath = resolve(here, opt('config') ?? process.env.AGENT_VAULT_CONFIG ?? 'demo-vault.config.json');
 let config;
 try {
   config = JSON.parse(readFileSync(configPath, 'utf8'));
@@ -63,11 +63,12 @@ try {
 const agentName = opt('agent');
 const merchantArg = opt('merchant');
 const amountArg = opt('amount');
-const agentFile = config.agents?.[agentName];
+const agentEntry = config.agents?.[agentName];
+const agentFile = typeof agentEntry === 'string' ? agentEntry : agentEntry?.keyFile;
 const merchantName = Object.keys(config.merchants ?? {}).find((m) => m.toLowerCase() === merchantArg?.toLowerCase());
 if (!agentFile) fail(`Unknown --agent "${agentName ?? ''}". Choose one of: ${Object.keys(config.agents ?? {}).join(', ')}`);
 if (!merchantName) fail(`Unknown --merchant "${merchantArg ?? ''}". Choose one of: ${Object.keys(config.merchants ?? {}).join(', ')}`);
-if (!/^[1-9]\d*$/.test(amountArg ?? '')) fail('--amount must be a positive whole number of Demo USD');
+if (!/^[1-9]\d*$/.test(amountArg ?? '')) fail('--amount must be a positive whole number');
 const amount = BigInt(amountArg);
 
 const rpc = createSolanaRpc(DEVNET_URL);
@@ -78,7 +79,7 @@ const mint = address(config.mint);
 const dest = await getAssociatedTokenAddress(address(config.merchants[merchantName]), mint);
 const pdas = await getVaultPdas(address(config.owner), mint);
 
-console.log(`\n  ${agentName} → ${merchantName}: ${amount} Demo USD`);
+console.log(`\n  ${agentName} → ${merchantName}: ${amount} ${config.tokenSymbol ?? 'Demo USD'}`);
 
 const { value: blockhash } = await rpc.getLatestBlockhash().send();
 let msg = createTransactionMessage({ version: 0 });
@@ -107,7 +108,7 @@ for (let i = 0; i < 40; i++) {
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
 const red = (s) => `\x1b[31m${s}\x1b[0m`;
 if (err === null) {
-  console.log(`\n  ${green('✓ APPROVED')}  ${amount} Demo USD paid to ${merchantName}`);
+  console.log(`\n  ${green('✓ APPROVED')}  ${amount} ${config.tokenSymbol ?? 'Demo USD'} paid to ${merchantName}`);
 } else if (err === 'timeout') {
   console.log('\n  ? No confirmation after 40 s — check the link below');
 } else {

@@ -35,65 +35,82 @@ export type ApprovalState = {
  * script) — a control panel claiming to be trustworthy should be able to
  * show its work, including when it says no.
  *
+ * A builder may return one transaction's instructions (Instruction[]) or
+ * several (Instruction[][]). Several are signed and confirmed strictly in
+ * order, one Phantom approval each, because later ones can depend on
+ * earlier ones having landed (e.g. add_agent needs the vault to exist).
+ *
  * No transaction-building logic lives here — callers pass in already-built
- * Instruction objects from lib/program.ts, unchanged from before this
- * redesign.
+ * Instruction objects from lib/program.ts.
  */
 export function useApprovalAction(client: AppClient) {
   const [state, setState] = useState<ApprovalState>({ stage: 'idle', label: '' });
 
   const run = useCallback(
-    async (label: string, buildInstructions: () => Promise<Instruction[]> | Instruction[]): Promise<boolean> => {
+    async (
+      label: string,
+      buildInstructions: () => Promise<Instruction[] | Instruction[][]> | Instruction[] | Instruction[][],
+    ): Promise<boolean> => {
       setState({ stage: 'awaiting-wallet', label });
       try {
-        const instructions = await buildInstructions();
+        const built = await buildInstructions();
+        const batches: Instruction[][] = Array.isArray(built[0])
+          ? (built as Instruction[][])
+          : [built as Instruction[]];
         const payer = client.payer;
         // The wallet plugin's signer implements modifyAndSignTransactions
         // whenever Phantom exposes `solana:signTransaction`, which it does —
         // this just proves that to the type system.
         assertIsTransactionModifyingSigner(payer);
-        const { value: blockhash } = await client.rpc.getLatestBlockhash().send();
 
-        const message = pipe(
-          createTransactionMessage({ version: 0 }),
-          (m) => setTransactionMessageFeePayer(payer.address, m),
-          (m) => appendTransactionMessageInstructions(instructions, m),
-          (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
-        );
-        const compiled = compileTransaction(message);
+        let lastSignature = '';
+        for (let b = 0; b < batches.length; b++) {
+          const step = batches.length > 1 ? ` (${b + 1}/${batches.length})` : '';
+          setState({ stage: 'awaiting-wallet', label: label + step });
+          const { value: blockhash } = await client.rpc.getLatestBlockhash().send();
 
-        // Pops up Phantom. Resolves on approval, throws on rejection.
-        const [signed] = await payer.modifyAndSignTransactions([compiled]);
+          const message = pipe(
+            createTransactionMessage({ version: 0 }),
+            (m) => setTransactionMessageFeePayer(payer.address, m),
+            (m) => appendTransactionMessageInstructions(batches[b], m),
+            (m) => setTransactionMessageLifetimeUsingBlockhash(blockhash, m),
+          );
+          const compiled = compileTransaction(message);
 
-        setState({ stage: 'confirming', label });
-        const wire = getBase64EncodedWireTransaction(signed);
-        const signature = await client.rpc
-          .sendTransaction(wire, { encoding: 'base64', skipPreflight: true, preflightCommitment: 'confirmed' })
-          .send();
+          // Pops up Phantom. Resolves on approval, throws on rejection.
+          const [signed] = await payer.modifyAndSignTransactions([compiled]);
 
-        let onChainError: unknown = null;
-        for (let i = 0; i < 30; i++) {
-          const { value: statuses } = await client.rpc.getSignatureStatuses([signature]).send();
-          const status = statuses[0];
-          if (status && status.confirmationStatus && status.confirmationStatus !== 'processed') {
-            onChainError = status.err ?? null;
-            break;
+          setState({ stage: 'confirming', label: label + step });
+          const wire = getBase64EncodedWireTransaction(signed);
+          const signature = await client.rpc
+            .sendTransaction(wire, { encoding: 'base64', skipPreflight: true, preflightCommitment: 'confirmed' })
+            .send();
+          lastSignature = signature;
+
+          let onChainError: unknown = null;
+          for (let i = 0; i < 30; i++) {
+            const { value: statuses } = await client.rpc.getSignatureStatuses([signature]).send();
+            const status = statuses[0];
+            if (status && status.confirmationStatus && status.confirmationStatus !== 'processed') {
+              onChainError = status.err ?? null;
+              break;
+            }
+            await new Promise((r) => setTimeout(r, 1000));
           }
-          await new Promise((r) => setTimeout(r, 1000));
+
+          if (onChainError) {
+            setState({
+              stage: 'error',
+              label: label + step,
+              signature,
+              solscanUrl: solscanTx(signature),
+              errorMessage: explainError(onChainError),
+            });
+            return false;
+          }
         }
 
-        if (onChainError) {
-          setState({
-            stage: 'error',
-            label,
-            signature,
-            solscanUrl: solscanTx(signature),
-            errorMessage: explainError(onChainError),
-          });
-          return false;
-        }
-
-        setState({ stage: 'done', label, signature, solscanUrl: solscanTx(signature) });
+        setState({ stage: 'done', label, signature: lastSignature, solscanUrl: solscanTx(lastSignature) });
         return true;
       } catch (err) {
         setState({ stage: 'error', label, errorMessage: explainError(err) });

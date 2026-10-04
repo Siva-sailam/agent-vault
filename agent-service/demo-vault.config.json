@@ -1,0 +1,91 @@
+{
+  "name": "Agent USD demo vault",
+  "owner": "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
+  "mint": "EMiGUP2fckjgjgHiTnG4237q3jY4PygPg6zZeVb5fNh9",
+  "tokenSymbol": "aUSD",
+  "agents": {
+    "food-ordering-agent": {
+      "keyFile": "food-ordering-agent.json",
+      "address": "5j6MVbQawnm7tZWD9pJRv5Ai8Kt4ZC7R6DKQNZPaL2kg",
+      "weeklyBudget": 200,
+      "merchants": [
+        "Kuber Eats",
+        "Talabird",
+        "Zomatic",
+        "Noonly"
+      ]
+    },
+    "shopping-agent": {
+      "keyFile": "shopping-agent.json",
+      "address": "BUoabuXD2afpjb53sWuz36hEdMWeLg9cGZPBfSVGLWne",
+      "weeklyBudget": 200,
+      "merchants": [
+        "Amazen",
+        "Flipkort",
+        "Nykeo",
+        "Meeshi"
+      ]
+    }
+  },
+  "merchants": {
+    "Kuber Eats": "8eviovXXxCChQ5XFxkfP9mS9G4P15HikgPWnDLAdFQ3m",
+    "Talabird": "77SZgXFJhwAaUyoEL9ZbGPBHNVzs2vvru6hmVBn1sLNG",
+    "Zomatic": "5fNBNoqhN1qHS8KnuWA2fTa2mBjjUNRQWPGJBN8gdWvg",
+    "Noonly": "93UovYKh3DKvNoJ4StR74NXRacRPEbKtVFkZT8wfEsRw",
+    "Amazen": "382vZ6MF78Uw4HEXuRRi2hZxM7g3XuSP2iq9pJ8Q8A1P",
+    "Flipkort": "A8qHSX5ssv3kcpVDcX5nzRNs4fxXmDzbaNdZ6sYhKpE6",
+    "Nykeo": "5b1MBaMfiup3dzbJQAAJYVvY5mmM41y5inihJJetrGry",
+    "Meeshi": "4sD8JjJwzKgxRDGqfwabWAEUWMs3LnRpNLzcwpbPXUqC"
+  },
+  "merchantKeyFiles": {
+    "Kuber Eats": "merchant-kuber-eats.json",
+    "Talabird": "merchant-talabird.json",
+    "Zomatic": "merchant-zomatic.json",
+    "Noonly": "merchant-noonly.json",
+    "Amazen": "merchant-amazen.json",
+    "Flipkort": "merchant-flipkort.json",
+    "Nykeo": "merchant-nykeo.json",
+    "Meeshi": "merchant-meeshi.json"
+  },
+  "scenario": {
+    "agent": "food-ordering-agent",
+    "steps": [
+      {
+        "spend": [
+          "Noonly",
+          20
+        ]
+      },
+      {
+        "spend": [
+          "Talabird",
+          20
+        ]
+      },
+      {
+        "spend": [
+          "Zomatic",
+          15
+        ]
+      },
+      {
+        "pause": "Go to the control panel and switch Noonly OFF for the food-ordering agent, then press Continue."
+      },
+      {
+        "spend": [
+          "Noonly",
+          5
+        ]
+      },
+      {
+        "pause": "Go to the control panel and revoke the food-ordering agent, then press Continue."
+      },
+      {
+        "spend": [
+          "Talabird",
+          5
+        ]
+      }
+    ]
+  }
+}

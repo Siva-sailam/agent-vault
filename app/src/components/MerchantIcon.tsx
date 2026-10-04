@@ -6,6 +6,10 @@ import { ShoppingBagIcon, ScooterIcon, PlateIcon, TakeoutIcon } from './icons';
 // No brand logo is drawn here — these are placeholders only.
 const CATEGORY_ICON: Record<string, ComponentType<{ size?: number }>> = {
   noon: ShoppingBagIcon,
+  noonly: ShoppingBagIcon,
+  talabird: ScooterIcon,
+  zomatic: PlateIcon,
+  kubereats: TakeoutIcon,
   talabat: ScooterIcon,
   zomato: PlateIcon,
   ubereats: TakeoutIcon,

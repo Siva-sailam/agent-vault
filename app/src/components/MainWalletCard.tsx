@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { address, type Address, type TransactionSigner, type Instruction } from '@solana/kit';
 import type { VaultState } from '../hooks/useVaultState';
-import { MERCHANT_CATALOGUE } from '../catalogue';
+import { ACTIVE_VAULT } from '../vaults';
+import { packInstructions } from '../lib/packInstructions';
 import {
   MAX_AGENTS,
+  MAX_MERCHANTS_PER_AGENT,
   getAssociatedTokenAddress,
   ixAddAgent,
   ixAddMerchant,
@@ -14,7 +16,9 @@ import {
 } from '../lib/program';
 import { solscanAccount } from '../lib/solscan';
 
-type RunApproval = (label: string, build: () => Promise<Instruction[]> | Instruction[]) => Promise<boolean>;
+const SYM = ACTIVE_VAULT.symbol;
+
+type RunApproval = (label: string, build: () => Promise<Instruction[] | Instruction[][]> | Instruction[] | Instruction[][]) => Promise<boolean>;
 
 export function MainWalletCard({
   payer,
@@ -44,12 +48,37 @@ export function MainWalletCard({
     if (ok) vault.refresh();
   }
 
+  /** One click: initialize_vault + add_agent x2 + add_merchant x8, packed into
+   * as few Phantom-signed transactions as fit the size limit. Deposit is a
+   * separate action. */
+  async function setUpDemoVault() {
+    const agents = ACTIVE_VAULT.setupAgents;
+    if (!vault.pdas || !agents) return;
+    setBusy(true);
+    const ok = await runApproval('Set up demo vault', async () => {
+      const ataByLabel = new Map<string, Address>();
+      for (const m of ACTIVE_VAULT.merchants) {
+        ataByLabel.set(m.label, await getAssociatedTokenAddress(address(m.wallet), mint));
+      }
+      const ixs: Instruction[] = [
+        ixInitializeVault(payer, mint, vault.pdas!.rules, vault.pdas!.vaultAuthority, vault.pdas!.vault),
+        ...agents.map((a) => ixAddAgent(payer, vault.pdas!.rules, address(a.address), BigInt(a.weeklyBudget))),
+        ...agents.flatMap((a) =>
+          a.merchants.map((label) => ixAddMerchant(payer, vault.pdas!.rules, address(a.address), ataByLabel.get(label)!)),
+        ),
+      ];
+      return packInstructions(payer.address, ixs);
+    });
+    setBusy(false);
+    if (ok) vault.refresh();
+  }
+
   async function transferToVault() {
     if (!vault.pdas || !vault.ownerAta) return;
     const amount = BigInt(transferAmount || '0');
     if (amount <= 0n) return;
     setBusy(true);
-    const ok = await runApproval(`Move ${transferAmount} Demo USD from your main wallet to the vault`, () => [
+    const ok = await runApproval(`Move ${transferAmount} ${SYM} from your main wallet to the vault`, () => [
       ixEnsureAssociatedTokenAccount(payer, payer.address, mint, vault.ownerAta!),
       ixDeposit(payer, vault.pdas!.rules, vault.pdas!.vault, vault.ownerAta!, amount),
     ]);
@@ -62,7 +91,7 @@ export function MainWalletCard({
     const amount = BigInt(transferAmount || '0');
     if (amount <= 0n) return;
     setBusy(true);
-    const ok = await runApproval(`Move ${transferAmount} Demo USD from the vault to your main wallet`, () => [
+    const ok = await runApproval(`Move ${transferAmount} ${SYM} from the vault to your main wallet`, () => [
       ixEnsureAssociatedTokenAccount(payer, payer.address, mint, vault.ownerAta!),
       ixWithdraw(payer, vault.pdas!.rules, vault.pdas!.vault, vault.pdas!.vaultAuthority, vault.ownerAta!, amount),
     ]);
@@ -82,11 +111,11 @@ export function MainWalletCard({
     if (budget <= 0n) return;
 
     const merchantAtas = await Promise.all(
-      MERCHANT_CATALOGUE.map((m) => getAssociatedTokenAddress(address(m.wallet), mint)),
+      ACTIVE_VAULT.merchants.slice(0, MAX_MERCHANTS_PER_AGENT).map((m) => getAssociatedTokenAddress(address(m.wallet), mint)),
     );
 
     setBusy(true);
-    const ok = await runApproval(`Add agent with a ${newAgentBudget} Demo USD weekly budget`, () => [
+    const ok = await runApproval(`Add agent with a ${newAgentBudget} ${SYM} weekly budget`, () => [
       ixAddAgent(payer, vault.pdas!.rules, agentAddress, budget),
       ...merchantAtas.map((ata) => ixAddMerchant(payer, vault.pdas!.rules, agentAddress, ata)),
     ]);
@@ -104,10 +133,22 @@ export function MainWalletCard({
     return (
       <div className="panel">
         <h2>Create your vault</h2>
-        <p className="hint">No vault exists yet for this wallet and Demo USD. One-time setup.</p>
-        <button disabled={busy} onClick={createVault} style={{ marginTop: 10 }}>
-          Create vault
-        </button>
+        <p className="hint">No vault exists yet for this wallet and {SYM}. One-time setup.</p>
+        {ACTIVE_VAULT.setupAgents ? (
+          <>
+            <p className="hint">
+              Creates the vault, registers {ACTIVE_VAULT.setupAgents.length} agents ({ACTIVE_VAULT.setupAgents[0].weeklyBudget}{' '}
+              {SYM} weekly each) and allow-lists their merchants.
+            </p>
+            <button disabled={busy} onClick={setUpDemoVault} style={{ marginTop: 10 }}>
+              Set up demo vault
+            </button>
+          </>
+        ) : (
+          <button disabled={busy} onClick={createVault} style={{ marginTop: 10 }}>
+            Create vault
+          </button>
+        )}
       </div>
     );
   }
@@ -121,14 +162,14 @@ export function MainWalletCard({
           <p className="wallet-balance-label">Main wallet</p>
           <p className="wallet-balance-amount balance-amount-secondary">
             {vault.ownerBalance.toString()}
-            <span>Demo USD</span>
+            <span>{SYM}</span>
           </p>
         </div>
         <div>
           <p className="wallet-balance-label">Vault</p>
           <p className="wallet-balance-amount">
             {vault.vaultBalance.toString()}
-            <span>Demo USD</span>
+            <span>{SYM}</span>
           </p>
         </div>
       </div>
@@ -185,7 +226,7 @@ export function MainWalletCard({
                   Add agent
                 </button>
               </div>
-              <p className="hint">All 4 catalogue merchants switch on by default — turn any off on the agent's card.</p>
+              <p className="hint">The first 4 catalogue merchants switch on by default — turn any off on the agent's card.</p>
             </div>
           )}
         </div>
