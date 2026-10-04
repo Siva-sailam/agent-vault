@@ -172,3 +172,13 @@ export function explainTransactionError(err) {
   }
   return `Refused (raw error, not a program custom error): ${text}`;
 }
+
+/** Like explainTransactionError, but returns { name, code, msg } for a
+ * program custom error (e.g. MerchantNotAllowed / 6006), else null. */
+export function programErrorInfo(err) {
+  if (err == null) return null;
+  const text = typeof err === 'string' ? err : JSON.stringify(err, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+  const match = text.match(/"Custom":\s*"?(\d+)"?/) ?? text.match(/Custom\((\d+)\)/);
+  const e = match && idl.errors.find((x) => x.code === Number(match[1]));
+  return e ? { name: e.name, code: e.code, msg: e.msg } : null;
+}

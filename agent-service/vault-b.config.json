@@ -1,0 +1,14 @@
+{
+  "owner": "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
+  "mint": "3txU6ZAzx6oAMhFMd9CjuRTFB9YkCYvnYSZeFfLK19ec",
+  "agents": {
+    "agent-grocery": "agent-grocery.json",
+    "agent-second": "agent-second.json"
+  },
+  "merchants": {
+    "Noon": "DFTuEQUPL2X3ZPnKd649r5iE4Dtfg9anXKRwVW7Qc3ne",
+    "Talabat": "79SqU4CSRmu6bq7QQiFet8bHLs7zJj8e4yWiTZF4F5zo",
+    "Zomato": "4TBdAhTAKeYCSKYnc5vtrAgMDkgrHT9AoJfEmxKc8vqK",
+    "Uber Eats": "2wqyxRpzQApHzdsNSz1d8HQpJD3JkhtYsZ8MVpiGE9fD"
+  }
+}
