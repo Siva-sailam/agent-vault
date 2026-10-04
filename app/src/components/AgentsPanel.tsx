@@ -9,7 +9,8 @@ import {
 } from '../lib/program';
 import { ACTIVE_VAULT } from '../vaults';
 import { agentStyle } from '../storefront/merchantStyle';
-import { AgentScene, themeFor } from './AgentScene';
+import { AgentArt, themeFor } from './AgentArt';
+import { ChipIcon } from './icons';
 import { MerchantAvatar } from './MerchantAvatar';
 
 const SYM = ACTIVE_VAULT.symbol;
@@ -107,19 +108,23 @@ export function AgentCardView({
 
   return (
     <div className={`agent-card theme-${theme}${agent.revoked ? ' revoked' : ''}`}>
-      <AgentScene theme={theme} revoked={agent.revoked} />
-
-      <div className="agent-card-body">
-        <div className="agent-head">
-          <div className="agent-head-text">
-            <h3 className="agent-name">{name}</h3>
-            <p className="agent-number">
-              {agent.key.slice(0, 4)} •••• {agent.key.slice(-4)}
-            </p>
-          </div>
+      {/* The agent as a card: static art embossed into its face. */}
+      <div className="agent-face">
+        <AgentArt theme={theme} />
+        <div className="agent-face-top">
+          <ChipIcon className="agent-chip" />
           <span className="agent-status">{agent.revoked ? 'Revoked' : 'Active'}</span>
         </div>
+        <div className="agent-face-bottom">
+          <h3 className="agent-name">{name}</h3>
+          <p className="agent-number">
+            {agent.key.slice(0, 4)} •••• •••• {agent.key.slice(-4)}
+          </p>
+        </div>
+        {agent.revoked && <span className="agent-face-stamp">BLOCKED</span>}
+      </div>
 
+      <div className="agent-card-body">
         <div className="agent-stats">
           <div className="agent-budget-row">
             <span>

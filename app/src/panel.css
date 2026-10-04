@@ -237,34 +237,42 @@ body:has(.app-page) {
 }
 
 /* ----- agent cards -------------------------------------------------- */
+/* The page scrolls inside .carousel-card-inner, so the card must be allowed
+   to grow taller than the panel (min-height, never a fixed height and never
+   overflow:hidden) or the merchant list can't be reached. */
 .agent-card {
   --a1: #8a3ffc;
   --a2: #ff4fa3;
   --accent: #8a3ffc;
   --accent-soft: rgba(138, 63, 252, 0.12);
-  --card-bg: #faf6ff;
   --card-line: rgba(138, 63, 252, 0.22);
+  --face: linear-gradient(135deg, #8a3ffc, #ff4fa3);
+  --face-glow: rgba(138, 63, 252, 0.4);
+  height: auto;
+  min-height: 100%;
   padding: 0;
-  overflow: hidden;
-  background: var(--card-bg);
-  border: 1.5px solid var(--card-line);
-  box-shadow: 0 14px 30px rgba(80, 40, 140, 0.14);
+  overflow: visible;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 .agent-card.theme-food {
   --a1: #ff7a18;
   --a2: #ffd23f;
   --accent: #f26a00;
   --accent-soft: rgba(255, 122, 24, 0.14);
-  --card-bg: #fff6e8;
-  --card-line: rgba(255, 122, 24, 0.3);
+  --card-line: rgba(255, 122, 24, 0.32);
+  --face: linear-gradient(135deg, #ff9a1f 0%, #ff5a36 55%, #e8264d 100%);
+  --face-glow: rgba(255, 90, 54, 0.42);
 }
 .agent-card.theme-shop {
   --a1: #ff4fa3;
   --a2: #2ee6c8;
   --accent: #f0207f;
   --accent-soft: rgba(255, 79, 163, 0.13);
-  --card-bg: #fff2fa;
-  --card-line: rgba(255, 79, 163, 0.3);
+  --card-line: rgba(255, 79, 163, 0.32);
+  --face: linear-gradient(135deg, #ff5fb0 0%, #a259ff 55%, #29d3d0 100%);
+  --face-glow: rgba(162, 89, 255, 0.42);
 }
 /* A revoked agent switches to a red / grey scheme whatever its theme. */
 .agent-card.revoked {
@@ -272,54 +280,130 @@ body:has(.app-page) {
   --a2: #9b8f94;
   --accent: #d92d34;
   --accent-soft: rgba(229, 72, 77, 0.14);
-  --card-bg: #f1e4e5;
   --card-line: rgba(217, 45, 52, 0.45);
-  background-image: repeating-linear-gradient(135deg, rgba(217, 45, 52, 0.06) 0 10px, transparent 10px 20px);
+  --face: linear-gradient(135deg, #7a6a70 0%, #4b3d42 100%);
+  --face-glow: rgba(217, 45, 52, 0.35);
 }
-.agent-card-body {
+
+/* The agent as a payment card, with its art embossed into the face. */
+.agent-face {
+  position: relative;
+  overflow: hidden;
   display: flex;
-  flex: 1;
   flex-direction: column;
-  min-height: 0;
-  padding: 16px 18px 18px;
-}
-.agent-head {
-  display: flex;
-  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  aspect-ratio: 1.7;
+  padding: 16px 18px;
+  border-radius: 24px;
+  color: #fff;
+  background: var(--face);
+  box-shadow:
+    0 16px 30px var(--face-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.18);
 }
-.agent-head-text {
-  min-width: 0;
+.agent-face::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.3), transparent 55%);
+  pointer-events: none;
+}
+.agent-art {
+  position: absolute;
+  right: -10px;
+  bottom: -6px;
+  width: 86%;
+  fill: #fff;
+  stroke: none;
+  mix-blend-mode: soft-light;
+  opacity: 0.85;
+  filter: drop-shadow(-1.5px -1.5px 0 rgba(255, 255, 255, 0.55)) drop-shadow(2px 2px 1.5px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+}
+.agent-art .agent-art-line {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.agent-art .agent-art-cut {
+  fill: #000;
+  opacity: 0.55;
+}
+.agent-face-top,
+.agent-face-bottom {
+  position: relative;
+  z-index: 1;
+}
+.agent-face-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.agent-face .agent-chip {
+  color: #ffe9a8;
+}
+.agent-face .agent-status {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+.agent-card.revoked .agent-face .agent-status {
+  background: #d92d34;
+  color: #fff;
 }
 .agent-name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
   overflow-wrap: anywhere;
 }
-.agent-card .agent-number {
-  margin: 2px 0 0;
-  font-size: 0.76rem;
-  color: var(--ink-soft);
+.agent-face .agent-number {
+  margin: 3px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.85);
 }
-.agent-card .agent-status {
-  flex-shrink: 0;
-  padding: 5px 12px;
-  background: var(--accent);
+.agent-face-stamp {
+  position: absolute;
+  z-index: 2;
+  right: 14px;
+  top: 50%;
+  margin-top: -14px;
+  padding: 4px 12px;
+  border: 2px solid #ffd7d9;
+  border-radius: 8px;
+  background: rgba(217, 45, 52, 0.9);
   color: #fff;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  transform: rotate(-6deg);
 }
-.agent-card.revoked .agent-status {
-  background: #d92d34;
-  color: #fff;
+.agent-card.revoked .agent-art {
+  opacity: 0.5;
+}
+
+.agent-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 14px 2px 18px;
 }
 .agent-stats {
-  margin-top: 14px;
   padding: 12px 14px;
   border-radius: 16px;
   background: #fff;
@@ -460,167 +544,4 @@ body:has(.app-page) {
 }
 .agent-card.revoked .merchant-row {
   opacity: 0.7;
-}
-
-/* ----- the animated scene across the top of each agent card ---------- */
-.scene {
-  position: relative;
-  height: 88px;
-  overflow: hidden;
-}
-.scene-food {
-  background: linear-gradient(180deg, #2a2790, #17155f);
-}
-.scene-shop {
-  background: linear-gradient(115deg, #ffc1df, #b6f6ea);
-}
-.scene-track {
-  position: absolute;
-  inset: 0;
-}
-.scene-food .scene-track::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 6px;
-  margin-top: -3px;
-  background: radial-gradient(circle, #ffe3a8 1.6px, transparent 2.2px) 0 50% / 14px 6px repeat-x;
-  opacity: 0.55;
-}
-.scene-shop .scene-track::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 72%;
-  border-top: 3px dashed rgba(255, 255, 255, 0.85);
-}
-.scene-item {
-  position: absolute;
-  top: 50%;
-  margin-top: -17px;
-  font-size: 28px;
-  line-height: 1;
-  animation-duration: var(--lap);
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-.scene-item-inner {
-  display: inline-block;
-  animation: scene-bob 1.7s ease-in-out infinite;
-}
-.scene-actor {
-  position: absolute;
-  top: 50%;
-  left: -12%;
-  margin-top: -18px;
-  animation: scene-run var(--lap) linear infinite;
-  filter: drop-shadow(0 0 8px rgba(255, 210, 63, 0.75));
-}
-.scene-shop .scene-actor {
-  filter: none;
-}
-.pacman-body {
-  position: relative;
-  display: block;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #ffd23f;
-  animation: scene-chomp 0.3s ease-in-out infinite alternate;
-}
-.pacman-body::after {
-  content: '';
-  position: absolute;
-  top: 7px;
-  left: 17px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #1b1340;
-}
-.cart-body {
-  display: block;
-  filter: drop-shadow(0 3px 3px rgba(60, 20, 90, 0.25));
-}
-
-.scene-stamp {
-  position: absolute;
-  right: 12px;
-  top: 10px;
-  padding: 3px 10px;
-  border-radius: 6px;
-  background: #d92d34;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  transform: rotate(4deg);
-  box-shadow: 0 4px 10px rgba(217, 45, 52, 0.35);
-}
-/* Revoked: the actor freezes at the start, nothing gets eaten, all greyed. */
-.scene.is-revoked .scene-track {
-  filter: grayscale(0.9);
-}
-.scene.is-revoked.scene-food {
-  background: linear-gradient(180deg, #4a3a40, #2c2226);
-}
-.scene.is-revoked.scene-shop {
-  background: linear-gradient(115deg, #d9c3c6, #c9b6b9);
-}
-.scene.is-revoked .scene-actor {
-  animation: none;
-  left: 4%;
-}
-.scene.is-revoked .scene-item,
-.scene.is-revoked .scene-item-inner {
-  animation: none;
-  opacity: 0.6;
-}
-.scene.is-revoked .pacman-body {
-  animation: none;
-  background: #9a9aa6;
-}
-.scene.is-revoked .scene-actor {
-  filter: none;
-}
-
-@keyframes scene-run {
-  from {
-    left: -12%;
-  }
-  to {
-    left: 108%;
-  }
-}
-@keyframes scene-chomp {
-  from {
-    clip-path: polygon(100% 74%, 44% 48%, 100% 21%, 100% 0, 0 0, 0 100%, 100% 100%);
-  }
-  to {
-    clip-path: polygon(100% 56%, 44% 48%, 100% 40%, 100% 0, 0 0, 0 100%, 100% 100%);
-  }
-}
-@keyframes scene-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scene-actor,
-  .scene-item,
-  .scene-item-inner,
-  .pacman-body {
-    animation: none !important;
-  }
-  .scene-actor {
-    left: 4%;
-  }
 }
