@@ -10,7 +10,7 @@ import {
 import { ACTIVE_VAULT } from '../vaults';
 import { agentStyle } from '../storefront/merchantStyle';
 import { AgentArt, themeFor } from './AgentArt';
-import { ChipIcon } from './icons';
+import { AgentLogoIcon } from './icons';
 import { MerchantAvatar } from './MerchantAvatar';
 
 const SYM = ACTIVE_VAULT.symbol;
@@ -112,7 +112,9 @@ export function AgentCardView({
       <div className="agent-face">
         <AgentArt theme={theme} />
         <div className="agent-face-top">
-          <ChipIcon className="agent-chip" />
+          <span className="agent-logo">
+            <AgentLogoIcon size={26} />
+          </span>
           <span className="agent-status">{agent.revoked ? 'Revoked' : 'Active'}</span>
         </div>
         <div className="agent-face-bottom">

@@ -88,3 +88,20 @@ export function TakeoutIcon({ size = 24, className }: IconProps) {
     </svg>
   );
 }
+
+/** AI-agent mark: a bot head with an antenna and a small sparkle. Drawn in
+ * currentColor so it can sit on any card colour. */
+export function AgentLogoIcon({ size = 26, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M16 5.5v3.2" />
+      <circle cx="16" cy="4.4" r="1.5" fill="currentColor" stroke="none" />
+      <rect x="6" y="9" width="20" height="15" rx="5.5" />
+      <circle cx="12" cy="16" r="1.9" fill="currentColor" stroke="none" />
+      <circle cx="20" cy="16" r="1.9" fill="currentColor" stroke="none" />
+      <path d="M12.5 20.2c1.9 1.3 5.1 1.3 7 0" />
+      <path d="M3 15v3M29 15v3" />
+      <path d="M25.6 3.2l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

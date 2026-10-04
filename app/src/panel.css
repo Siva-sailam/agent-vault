@@ -1,4 +1,4 @@
-/* Control panel theme — bright "candy" look: sunny pastel page, a gradient
+/* Control panel theme — calm pastel look: a soft page, a gradient
    hero balance card and one distinctly themed card per agent (food = arcade
    muncher, shopping = cart run). Loaded after App.css so it overrides it;
    the colour tokens are scoped to the phone screen so nothing else shifts. */
@@ -6,18 +6,18 @@
 /* ----- page around the phone ---------------------------------------- */
 html:has(.app-page),
 body:has(.app-page) {
-  background: #fdf4ff;
+  background: #f6f2fa;
 }
 .app-page {
   background:
-    radial-gradient(520px 380px at 8% 6%, rgba(255, 143, 199, 0.55), transparent 70%),
-    radial-gradient(560px 420px at 96% 12%, rgba(125, 214, 255, 0.55), transparent 70%),
-    radial-gradient(620px 460px at 55% 104%, rgba(255, 226, 120, 0.6), transparent 70%),
-    #fdf4ff;
+    radial-gradient(520px 380px at 8% 6%, rgba(214, 170, 200, 0.36), transparent 70%),
+    radial-gradient(560px 420px at 96% 12%, rgba(160, 196, 222, 0.36), transparent 70%),
+    radial-gradient(620px 460px at 55% 104%, rgba(230, 210, 160, 0.38), transparent 70%),
+    #f6f2fa;
 }
 .app-page-heading h1 {
   font-size: 2rem;
-  background: linear-gradient(90deg, #ff3d9a, #7b2ff7 55%, #1fb6ff);
+  background: linear-gradient(90deg, #a35c86, #5f55b0 55%, #4a8fb5);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -28,18 +28,18 @@ body:has(.app-page) {
 
 /* ----- tokens inside the phone -------------------------------------- */
 .phone-screen {
-  --paper: #fff9f2;
+  --paper: #fbf8f4;
   --surface: #ffffff;
-  --surface-raised: #f4edff;
-  --hairline: rgba(70, 30, 110, 0.12);
-  --ink: #1d1330;
-  --ink-soft: rgba(29, 19, 48, 0.62);
-  --ink-faint: rgba(29, 19, 48, 0.42);
-  --purple: #8a3ffc;
-  --purple-deep: #5f1fd1;
-  --purple-soft: rgba(138, 63, 252, 0.13);
-  --danger: #e5484d;
-  background: linear-gradient(180deg, #fff9f2, #f8f2ff);
+  --surface-raised: #f1edf7;
+  --hairline: rgba(60, 45, 90, 0.11);
+  --ink: #2a2238;
+  --ink-soft: rgba(42, 34, 56, 0.64);
+  --ink-faint: rgba(42, 34, 56, 0.44);
+  --purple: #6f62b8;
+  --purple-deep: #4d4396;
+  --purple-soft: rgba(111, 98, 184, 0.12);
+  --danger: #bb4a50;
+  background: linear-gradient(180deg, #fbf8f4, #f4f0f8);
   text-align: left; /* index.css centres #root; the phone UI reads left-aligned */
 }
 .phone-header h1 {
@@ -58,7 +58,7 @@ body:has(.app-page) {
   background: #fff;
   border: 1px solid var(--hairline);
   border-radius: 22px;
-  box-shadow: 0 6px 18px rgba(80, 40, 140, 0.07);
+  box-shadow: 0 6px 18px rgba(70, 55, 110, 0.06);
   padding: 16px;
 }
 .phone-screen .panel h2 {
@@ -80,8 +80,8 @@ body:has(.app-page) {
   padding: 18px;
   border-radius: 26px;
   color: #fff;
-  background: linear-gradient(135deg, #7b2ff7 0%, #f107a3 58%, #ff8a00 100%);
-  box-shadow: 0 16px 32px rgba(241, 7, 163, 0.28);
+  background: linear-gradient(135deg, #5c55a6 0%, #85689f 55%, #c28d86 100%);
+  box-shadow: 0 14px 28px rgba(92, 85, 166, 0.26);
 }
 .wallet-hero::after {
   content: '';
@@ -91,7 +91,7 @@ body:has(.app-page) {
   width: 170px;
   height: 170px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.12);
 }
 .wallet-hero::before {
   content: '';
@@ -124,7 +124,7 @@ body:has(.app-page) {
   color: #fff;
 }
 .wallet-hero .agents-active-pill .dot-live {
-  background: #d4ff4a;
+  background: #cfe3a8;
 }
 .hero-balances {
   position: relative;
@@ -218,8 +218,8 @@ body:has(.app-page) {
   line-height: 1.15;
 }
 .transfer-actions .to-vault {
-  background: linear-gradient(100deg, #7b2ff7, #f107a3);
-  box-shadow: 0 8px 18px rgba(241, 7, 163, 0.25);
+  background: linear-gradient(100deg, #5f58ad, #8a68a6);
+  box-shadow: 0 8px 16px rgba(95, 88, 173, 0.22);
 }
 .transfer-actions .to-wallet {
   background: #fff;
@@ -230,10 +230,10 @@ body:has(.app-page) {
 /* ----- carousel chrome ----------------------------------------------- */
 .carousel-arrow {
   background: #fff;
-  box-shadow: 0 3px 10px rgba(80, 40, 140, 0.14);
+  box-shadow: 0 3px 10px rgba(70, 55, 110, 0.12);
 }
 .dot.active {
-  background: linear-gradient(90deg, #ff3d9a, #7b2ff7);
+  background: linear-gradient(90deg, #a35c86, #5f55b0);
 }
 
 /* ----- agent cards -------------------------------------------------- */
@@ -241,13 +241,13 @@ body:has(.app-page) {
    to grow taller than the panel (min-height, never a fixed height and never
    overflow:hidden) or the merchant list can't be reached. */
 .agent-card {
-  --a1: #8a3ffc;
-  --a2: #ff4fa3;
-  --accent: #8a3ffc;
-  --accent-soft: rgba(138, 63, 252, 0.12);
-  --card-line: rgba(138, 63, 252, 0.22);
-  --face: linear-gradient(135deg, #8a3ffc, #ff4fa3);
-  --face-glow: rgba(138, 63, 252, 0.4);
+  --a1: #6f62b8;
+  --a2: #b5779d;
+  --accent: #6f62b8;
+  --accent-soft: rgba(111, 98, 184, 0.11);
+  --card-line: rgba(111, 98, 184, 0.2);
+  --face: linear-gradient(135deg, #6f62b8, #b5779d);
+  --face-glow: rgba(111, 98, 184, 0.28);
   height: auto;
   min-height: 100%;
   padding: 0;
@@ -257,32 +257,32 @@ body:has(.app-page) {
   box-shadow: none;
 }
 .agent-card.theme-food {
-  --a1: #ff7a18;
-  --a2: #ffd23f;
-  --accent: #f26a00;
-  --accent-soft: rgba(255, 122, 24, 0.14);
-  --card-line: rgba(255, 122, 24, 0.32);
-  --face: linear-gradient(135deg, #ff9a1f 0%, #ff5a36 55%, #e8264d 100%);
-  --face-glow: rgba(255, 90, 54, 0.42);
+  --a1: #d39a68;
+  --a2: #e6c98a;
+  --accent: #b8693f;
+  --accent-soft: rgba(200, 130, 90, 0.13);
+  --card-line: rgba(200, 130, 90, 0.3);
+  --face: linear-gradient(135deg, #d8a06a 0%, #c9785a 55%, #b0626a 100%);
+  --face-glow: rgba(176, 98, 106, 0.28);
 }
 .agent-card.theme-shop {
-  --a1: #ff4fa3;
-  --a2: #2ee6c8;
-  --accent: #f0207f;
-  --accent-soft: rgba(255, 79, 163, 0.13);
-  --card-line: rgba(255, 79, 163, 0.32);
-  --face: linear-gradient(135deg, #ff5fb0 0%, #a259ff 55%, #29d3d0 100%);
-  --face-glow: rgba(162, 89, 255, 0.42);
+  --a1: #c98aa8;
+  --a2: #86bcc0;
+  --accent: #a8628d;
+  --accent-soft: rgba(168, 98, 141, 0.12);
+  --card-line: rgba(168, 98, 141, 0.28);
+  --face: linear-gradient(135deg, #c98aa8 0%, #9a8cc4 55%, #7fb3b8 100%);
+  --face-glow: rgba(154, 140, 196, 0.3);
 }
 /* A revoked agent switches to a red / grey scheme whatever its theme. */
 .agent-card.revoked {
-  --a1: #e5484d;
-  --a2: #9b8f94;
-  --accent: #d92d34;
-  --accent-soft: rgba(229, 72, 77, 0.14);
-  --card-line: rgba(217, 45, 52, 0.45);
-  --face: linear-gradient(135deg, #7a6a70 0%, #4b3d42 100%);
-  --face-glow: rgba(217, 45, 52, 0.35);
+  --a1: #b5565c;
+  --a2: #9b9094;
+  --accent: #a8484e;
+  --accent-soft: rgba(168, 72, 78, 0.12);
+  --card-line: rgba(168, 72, 78, 0.36);
+  --face: linear-gradient(135deg, #8a8085 0%, #625659 100%);
+  --face-glow: rgba(120, 60, 66, 0.26);
 }
 
 /* The agent as a payment card, with its art embossed into the face. */
@@ -298,7 +298,7 @@ body:has(.app-page) {
   color: #fff;
   background: var(--face);
   box-shadow:
-    0 16px 30px var(--face-glow),
+    0 14px 26px var(--face-glow),
     inset 0 1px 0 rgba(255, 255, 255, 0.45),
     inset 0 -2px 6px rgba(0, 0, 0, 0.18);
 }
@@ -306,7 +306,7 @@ body:has(.app-page) {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.3), transparent 55%);
+  background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.2), transparent 55%);
   pointer-events: none;
 }
 .agent-art {
@@ -318,7 +318,7 @@ body:has(.app-page) {
   stroke: none;
   mix-blend-mode: soft-light;
   opacity: 0.85;
-  filter: drop-shadow(-1.5px -1.5px 0 rgba(255, 255, 255, 0.55)) drop-shadow(2px 2px 1.5px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(-1.5px -1.5px 0 rgba(255, 255, 255, 0.55)) drop-shadow(2px 2px 1.5px rgba(0, 0, 0, 0.42));
   pointer-events: none;
 }
 .agent-art .agent-art-line {
@@ -342,8 +342,17 @@ body:has(.app-page) {
   align-items: center;
   justify-content: space-between;
 }
-.agent-face .agent-chip {
-  color: #ffe9a8;
+.agent-logo {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(4px);
 }
 .agent-face .agent-status {
   padding: 5px 12px;
@@ -357,7 +366,7 @@ body:has(.app-page) {
   backdrop-filter: blur(4px);
 }
 .agent-card.revoked .agent-face .agent-status {
-  background: #d92d34;
+  background: #a8434a;
   color: #fff;
 }
 .agent-name {
@@ -382,11 +391,11 @@ body:has(.app-page) {
   z-index: 2;
   right: 14px;
   top: 50%;
-  margin-top: -14px;
+  margin-top: -26px;
   padding: 4px 12px;
-  border: 2px solid #ffd7d9;
+  border: 2px solid #ecc9cb;
   border-radius: 8px;
-  background: rgba(217, 45, 52, 0.9);
+  background: rgba(168, 67, 74, 0.92);
   color: #fff;
   font-size: 0.78rem;
   font-weight: 800;
@@ -424,7 +433,7 @@ body:has(.app-page) {
   background: linear-gradient(90deg, var(--a1), var(--a2));
 }
 .agent-card .budget-bar-fill.high {
-  background: linear-gradient(90deg, #ff8a00, #e5484d);
+  background: linear-gradient(90deg, #d79a5f, #b5565c);
 }
 .agent-card .agent-window {
   margin-top: 8px;
@@ -483,14 +492,14 @@ body:has(.app-page) {
   width: 100%;
   padding: 11px 14px;
   border-radius: 14px;
-  border: 2px solid #d92d34;
+  border: 2px solid #b5484e;
   background: #fff;
-  color: #d92d34;
+  color: #b5484e;
   font-size: 0.9rem;
 }
 .agent-card .revoke-button.is-revoked {
-  border-color: #0f9d58;
-  background: #0f9d58;
+  border-color: #4a8f72;
+  background: #4a8f72;
   color: #fff;
 }
 .agent-card .agent-controls-title {

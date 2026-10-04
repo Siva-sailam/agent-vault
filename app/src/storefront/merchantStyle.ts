@@ -40,7 +40,7 @@ export function merchantStyle(label: string): { emoji: string; background: strin
   const hue = HUE[k] ?? hashHue(k);
   return {
     emoji: EMOJI[k] ?? '🛍️',
-    background: `linear-gradient(135deg, hsl(${hue} 90% 62%), hsl(${(hue + 45) % 360} 90% 52%))`,
+    background: `linear-gradient(135deg, hsl(${hue} 52% 66%), hsl(${(hue + 30) % 360} 48% 58%))`,
   };
 }
 
