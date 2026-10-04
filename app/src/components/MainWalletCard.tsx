@@ -157,43 +157,58 @@ export function MainWalletCard({
 
   return (
     <div>
-      <div className="balance-pair">
-        <div>
-          <p className="wallet-balance-label">Main wallet</p>
-          <p className="wallet-balance-amount balance-amount-secondary">
-            {vault.ownerBalance.toString()}
-            <span>{SYM}</span>
-          </p>
+      <div className="wallet-hero">
+        <div className="hero-top">
+          <span className="hero-chip">◎ {SYM}</span>
+          <span className="agents-active-pill">
+            <span className="dot-live" />
+            {vault.rules.agentCount} agent{vault.rules.agentCount === 1 ? '' : 's'} active
+          </span>
         </div>
-        <div>
-          <p className="wallet-balance-label">Vault</p>
-          <p className="wallet-balance-amount">
-            {vault.vaultBalance.toString()}
-            <span>{SYM}</span>
-          </p>
+        <div className="hero-balances">
+          <div>
+            <p className="hero-label">Main wallet</p>
+            <p className="hero-amount">
+              {vault.ownerBalance.toString()}
+              <span>{SYM}</span>
+            </p>
+          </div>
+          <div>
+            <p className="hero-label">Vault</p>
+            <p className="hero-amount">
+              {vault.vaultBalance.toString()}
+              <span>{SYM}</span>
+            </p>
+          </div>
         </div>
       </div>
-      <span className="agents-active-pill">
-        <span className="dot-live" />
-        {vault.rules.agentCount} agent{vault.rules.agentCount === 1 ? '' : 's'} active
-      </span>
 
-      <div className="panel" style={{ marginTop: 18 }}>
-        <h2>Transfer</h2>
-        <input
-          type="number"
-          min="1"
-          value={transferAmount}
-          onChange={(e) => setTransferAmount(e.target.value)}
-          disabled={busy}
-          style={{ width: '100%', marginBottom: 10 }}
-        />
-        <div className="row">
-          <button disabled={busy} onClick={transferToVault} style={{ flex: 1 }}>
-            Send to vault
+      <div className="panel transfer-panel">
+        <h2>Move money</h2>
+        <div className="amount-field">
+          <input
+            type="number"
+            min="1"
+            value={transferAmount}
+            onChange={(e) => setTransferAmount(e.target.value)}
+            disabled={busy}
+            aria-label={`Amount in ${SYM}`}
+          />
+          <span>{SYM}</span>
+        </div>
+        <div className="quick-row">
+          {[10, 50, 100, 200].map((n) => (
+            <button key={n} type="button" className={Number(transferAmount) === n ? 'on' : ''} disabled={busy} onClick={() => setTransferAmount(String(n))}>
+              {n}
+            </button>
+          ))}
+        </div>
+        <div className="transfer-actions">
+          <button className="to-vault" disabled={busy} onClick={transferToVault}>
+            ↑ To vault
           </button>
-          <button className="secondary" disabled={busy} onClick={transferToMainWallet} style={{ flex: 1 }}>
-            Send to main wallet
+          <button className="secondary to-wallet" disabled={busy} onClick={transferToMainWallet}>
+            ↓ To wallet
           </button>
         </div>
       </div>

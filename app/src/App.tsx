@@ -10,10 +10,11 @@ import { PhoneFrame } from './components/PhoneFrame';
 import { CardCarousel } from './components/CardCarousel';
 import { useVaultState } from './hooks/useVaultState';
 import { useApprovalAction } from './hooks/useApprovalAction';
-import { ACTIVE_VAULT, merchantKeyOf, merchantLabelsFor } from './vaults';
+import { ACTIVE_VAULT, agentNameFor, merchantKeyOf, merchantLabelsFor } from './vaults';
 import { getAssociatedTokenAddress } from './lib/program';
 import type { AppClient } from './providers';
 import './App.css';
+import './panel.css';
 
 const MINT = address(ACTIVE_VAULT.mint);
 
@@ -72,6 +73,7 @@ function Dashboard({ client }: { client: AppClient }) {
         payer={client.payer}
         rulesAddress={vault.pdas!.rules}
         agent={agent}
+        name={agentNameFor(agent.key)}
         merchants={merchants.filter((m) => merchantLabelsFor(agent.key).includes(m.label))}
         runApproval={approval.run}
         onChanged={vault.refresh}

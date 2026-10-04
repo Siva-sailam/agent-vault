@@ -22,6 +22,8 @@ export type VaultConfig = {
   merchants: MerchantDef[];
   /** Agents to register via the "Set up demo vault" button. Absent for Vault B. */
   setupAgents?: DemoAgent[];
+  /** Agent public key -> display name. */
+  agentNames: Record<string, string>;
 };
 
 const DEMO: VaultConfig = {
@@ -37,6 +39,7 @@ const DEMO: VaultConfig = {
     weeklyBudget: a.weeklyBudget,
     merchants: a.merchants,
   })),
+  agentNames: Object.fromEntries(Object.entries(demo.agents).map(([name, a]) => [a.address, name])),
 };
 
 const VAULT_B: VaultConfig = {
@@ -46,6 +49,10 @@ const VAULT_B: VaultConfig = {
   owner: '7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg',
   mint: DEMO_USD_MINT,
   merchants: MERCHANT_CATALOGUE,
+  agentNames: {
+    '9AVXftuvUQm6y8s4uoWUEDBeQcPMDABcDNBLTeaQa1eb': 'agent-grocery',
+    '4i8XMX2vk9rYEnJ9nh8bHTsZR6R1B5yHLCQBpfZ82AXY': 'agent-second',
+  },
 };
 
 function pick(): VaultConfig {
@@ -66,3 +73,8 @@ export function merchantLabelsFor(agentAddress: string): string[] {
 
 /** Key used for merchant icons: lower-case, no spaces. */
 export const merchantKeyOf = (label: string) => label.toLowerCase().replace(/\s+/g, '');
+
+/** Display name for an agent's public key, or a short form of the key. */
+export function agentNameFor(agentAddress: string): string {
+  return ACTIVE_VAULT.agentNames[agentAddress] ?? `agent-${agentAddress.slice(-4)}`;
+}

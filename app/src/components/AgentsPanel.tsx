@@ -7,9 +7,10 @@ import {
   ixSetAgentRevoked,
   type AgentState,
 } from '../lib/program';
-import { ChipIcon } from './icons';
-import { MerchantIcon } from './MerchantIcon';
 import { ACTIVE_VAULT } from '../vaults';
+import { agentStyle } from '../storefront/merchantStyle';
+import { AgentScene, themeFor } from './AgentScene';
+import { MerchantAvatar } from './MerchantAvatar';
 
 const SYM = ACTIVE_VAULT.symbol;
 
@@ -55,16 +56,19 @@ function MerchantToggle({
   }
 
   return (
-    <div className="merchant-row">
+    <label className={`merchant-row${isOn ? ' is-on' : ''}`}>
       <span className="merchant-row-label">
-        <MerchantIcon merchantKey={merchant.key} size={26} />
-        {merchant.label}
+        <MerchantAvatar label={merchant.label} size={34} />
+        <span className="merchant-row-name">
+          {merchant.label}
+          <small>{isOn ? 'Allowed' : 'Blocked'}</small>
+        </span>
       </span>
-      <label className="switch">
+      <span className="switch">
         <input type="checkbox" checked={isOn} disabled={pending} onChange={toggle} />
         <span className="switch-track" />
-      </label>
-    </div>
+      </span>
+    </label>
   );
 }
 
@@ -72,6 +76,7 @@ export function AgentCardView({
   payer,
   rulesAddress,
   agent,
+  name,
   merchants,
   runApproval,
   onChanged,
@@ -79,18 +84,21 @@ export function AgentCardView({
   payer: TransactionSigner;
   rulesAddress: Address;
   agent: AgentState;
+  /** Display name, e.g. "food-ordering-agent". */
+  name: string;
   merchants: MerchantRef[];
   runApproval: RunApproval;
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const theme = themeFor(name);
   const remaining = agent.weeklyBudget - agent.spentSoFar;
   const usedFraction = agent.weeklyBudget > 0n ? Number(agent.spentSoFar) / Number(agent.weeklyBudget) : 0;
 
   async function toggleRevoked() {
     setBusy(true);
     const nextRevoked = !agent.revoked;
-    const ok = await runApproval(`${nextRevoked ? 'Revoke' : 'Unrevoke'} this agent`, () => [
+    const ok = await runApproval(`${nextRevoked ? 'Revoke' : 'Unrevoke'} ${name}`, () => [
       ixSetAgentRevoked(payer, rulesAddress, agent.key, nextRevoked),
     ]);
     setBusy(false);
@@ -98,44 +106,67 @@ export function AgentCardView({
   }
 
   return (
-    <div className={`agent-card${agent.revoked ? ' revoked' : ''}`}>
-      <div className="agent-card-top">
-        <ChipIcon className="agent-chip" />
-        <span className="agent-status">{agent.revoked ? 'Revoked' : 'Active'}</span>
-      </div>
-      <p className="agent-number">
-        {agent.key.slice(0, 4)} •••• •••• {agent.key.slice(-4)}
-      </p>
-      <div className="agent-budget-row">
-        <span>
-          Spent <strong>{agent.spentSoFar.toString()}</strong> / {agent.weeklyBudget.toString()} {SYM}
-        </span>
-        <span>{remaining.toString()} left</span>
-      </div>
-      <div className="budget-bar-track">
-        <div
-          className={`budget-bar-fill${usedFraction > 0.8 ? ' high' : ''}`}
-          style={{ width: `${Math.min(100, usedFraction * 100)}%` }}
-        />
-      </div>
-      <p className="agent-window">Window {windowResetLabel(agent.windowStart)}</p>
+    <div className={`agent-card theme-${theme}${agent.revoked ? ' revoked' : ''}`}>
+      <AgentScene theme={theme} revoked={agent.revoked} />
 
-      <div className="agent-controls">
-        <button className={`revoke-button${agent.revoked ? ' is-revoked' : ''}`} disabled={busy} onClick={toggleRevoked}>
-          {agent.revoked ? 'Unrevoke agent' : 'Revoke agent'}
-        </button>
-        <p className="agent-controls-title">Merchants</p>
-        {merchants.map((m) => (
-          <MerchantToggle
-            key={m.key}
-            payer={payer}
-            rulesAddress={rulesAddress}
-            agent={agent}
-            merchant={m}
-            runApproval={runApproval}
-            onChanged={onChanged}
-          />
-        ))}
+      <div className="agent-card-body">
+        <div className="agent-head">
+          <div className="agent-head-text">
+            <h3 className="agent-name">{name}</h3>
+            <p className="agent-number">
+              {agent.key.slice(0, 4)} •••• {agent.key.slice(-4)}
+            </p>
+          </div>
+          <span className="agent-status">{agent.revoked ? 'Revoked' : 'Active'}</span>
+        </div>
+
+        <div className="agent-stats">
+          <div className="agent-budget-row">
+            <span>
+              Spent <strong>{agent.spentSoFar.toString()}</strong> / {agent.weeklyBudget.toString()} {SYM}
+            </span>
+            <span className="agent-left">{remaining.toString()} left</span>
+          </div>
+          <div className="budget-bar-track">
+            <div
+              className={`budget-bar-fill${usedFraction > 0.8 ? ' high' : ''}`}
+              style={{ width: `${Math.min(100, usedFraction * 100)}%` }}
+            />
+          </div>
+          <p className="agent-window">Weekly window {windowResetLabel(agent.windowStart)}</p>
+        </div>
+
+        <div className="agent-controls">
+          <div className="agent-revoke">
+            <div className="agent-revoke-who">
+              <span className="agent-revoke-emoji">{agentStyle(name).emoji}</span>
+              <span>
+                <small>Agent</small>
+                <strong>{name}</strong>
+              </span>
+            </div>
+            <button
+              className={`revoke-button${agent.revoked ? ' is-revoked' : ''}`}
+              disabled={busy}
+              onClick={toggleRevoked}
+            >
+              {agent.revoked ? 'Unrevoke agent' : 'Revoke agent'}
+            </button>
+          </div>
+
+          <p className="agent-controls-title">Merchants this agent may pay</p>
+          {merchants.map((m) => (
+            <MerchantToggle
+              key={m.key}
+              payer={payer}
+              rulesAddress={rulesAddress}
+              agent={agent}
+              merchant={m}
+              runApproval={runApproval}
+              onChanged={onChanged}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
