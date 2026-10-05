@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { address, createSolanaRpc } from '@solana/kit';
 import { useConnect, useConnectedWallet, useWallets, WalletReadyGate } from '@solana/kit-plugin-wallet/react';
 import { ACTIVE_VAULT } from './vaults';
-import { getAssociatedTokenAddress, getVaultPdas, ixTokenTransfer } from './lib/program';
-import { fetchTokenBalance } from './lib/rpcHelpers';
+import { decodeVaultRules, getAssociatedTokenAddress, getVaultPdas, ixTokenTransfer, WINDOW_SECONDS } from './lib/program';
+import { fetchAccountBytes, fetchTokenBalance } from './lib/rpcHelpers';
 import { useApprovalAction } from './hooks/useApprovalAction';
 import { ApprovalModal } from './components/ApprovalModal';
 import { agentStyle, merchantStyle } from './storefront/merchantStyle';
@@ -121,6 +121,48 @@ function useBalances(meta: Meta | null, agentName: string, nonce: number): Balan
   }, [meta, agentName, nonce, rpc]);
 
   return bal;
+}
+
+// ---------------------------------------------------------------------------
+// Weekly budgets, read from the vault's rules account so every agent shows one
+// (not only agents that have already paid in this session)
+// ---------------------------------------------------------------------------
+type Budget = { spent: number; limit: number };
+
+function useChainBudgets(meta: Meta | null, nonce: number): Map<string, Budget> {
+  const [budgets, setBudgets] = useState<Map<string, Budget>>(new Map());
+  const rpc = useMemo(() => createSolanaRpc(DEVNET_URL), []);
+
+  useEffect(() => {
+    if (!meta) return;
+    let stop = false;
+
+    async function tick() {
+      const pdas = await getVaultPdas(address(ACTIVE_VAULT.owner), address(ACTIVE_VAULT.mint));
+      const bytes = await fetchAccountBytes(rpc, pdas.rules);
+      if (!bytes || stop) return;
+      const rules = decodeVaultRules(bytes);
+      const now = Math.floor(Date.now() / 1000);
+      const next = new Map<string, Budget>();
+      for (const a of rules.agents) {
+        const name = meta!.agents.find((m) => m.address === a.key)?.name;
+        if (!name) continue;
+        // An elapsed window resets on the agent's next spend, so show it as unspent.
+        const expired = now - a.windowStart >= WINDOW_SECONDS;
+        next.set(name, { spent: expired ? 0 : Number(a.spentSoFar), limit: Number(a.weeklyBudget) });
+      }
+      setBudgets(next);
+    }
+
+    tick().catch(() => {});
+    const id = setInterval(() => tick().catch(() => {}), 3000);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+  }, [meta, nonce, rpc]);
+
+  return budgets;
 }
 
 function BalanceTile({
@@ -315,16 +357,8 @@ export function Storefront({ client }: { client: AppClient }) {
     return null;
   }, [events]);
 
-  const budgetByAgent = useMemo(() => {
-    const m = new Map<string, { spent: number; limit: number }>();
-    for (const e of events) {
-      if (e.kind === 'spend' && e.agent && e.spentSoFar != null && e.weeklyBudget != null) {
-        m.set(e.agent, { spent: e.spentSoFar, limit: e.weeklyBudget });
-      }
-    }
-    return m;
-  }, [events]);
-  const budget = activeAgent ? budgetByAgent.get(activeAgent.name) : undefined;
+  const chainBudgets = useChainBudgets(meta, nonce);
+  const budget = activeAgent ? chainBudgets.get(activeAgent.name) : undefined;
 
   const feed: FeedItem[] = useMemo(() => {
     const fromService: FeedItem[] = events
