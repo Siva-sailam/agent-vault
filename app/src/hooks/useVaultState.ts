@@ -37,7 +37,8 @@ export function useVaultState(client: AppClient, owner: Address | null, mint: Ad
       setRules(null);
       return;
     }
-    setLoading(true);
+    // Only show the loading state on the first fetch; polls refresh silently
+    // (otherwise the whole panel unmounts every 6 s and swallows clicks).
     (async () => {
       const nextPdas = await getVaultPdas(owner, mint);
       const nextOwnerAta = await getAssociatedTokenAddress(owner, mint);

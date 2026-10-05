@@ -22,3 +22,6 @@ test-ledger/
 # Logs and OS junk
 *.log
 .DS_Store
+
+# Claude Code local state / worktrees
+.claude/
