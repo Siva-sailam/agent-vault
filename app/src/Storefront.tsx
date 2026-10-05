@@ -165,59 +165,6 @@ function useChainBudgets(meta: Meta | null, nonce: number): Map<string, Budget> 
   return budgets;
 }
 
-function BalanceTile({
-  emoji,
-  label,
-  hint,
-  value,
-  symbol,
-  tone,
-}: {
-  emoji: string;
-  label: string;
-  hint: string;
-  value: bigint | null;
-  symbol: string;
-  tone: 'violet' | 'pink' | 'lime';
-}) {
-  const prev = useRef<bigint | null>(null);
-  const [delta, setDelta] = useState<{ amount: bigint; id: number } | null>(null);
-
-  useEffect(() => {
-    if (value == null) return;
-    if (prev.current != null && value !== prev.current) {
-      setDelta({ amount: value - prev.current, id: Date.now() });
-    }
-    prev.current = value;
-  }, [value]);
-
-  useEffect(() => {
-    if (!delta) return;
-    const t = setTimeout(() => setDelta(null), 3500);
-    return () => clearTimeout(t);
-  }, [delta]);
-
-  return (
-    <div className={`sf-balance sf-tone-${tone}`}>
-      <div className="sf-balance-top">
-        <span className="sf-balance-emoji">{emoji}</span>
-        <span className="sf-balance-label">{label}</span>
-      </div>
-      <div className="sf-balance-value">
-        {value == null ? '…' : value.toString()}
-        <span>{symbol}</span>
-        {delta && (
-          <em key={delta.id} className={delta.amount < 0n ? 'down' : 'up'}>
-            {delta.amount > 0n ? '+' : ''}
-            {delta.amount.toString()}
-          </em>
-        )}
-      </div>
-      <div className="sf-balance-hint">{hint}</div>
-    </div>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Wallet connection (only needed for "Main wallet" payments)
 // ---------------------------------------------------------------------------
@@ -444,19 +391,6 @@ export function Storefront({ client }: { client: AppClient }) {
             <i /> {connected ? 'Live · devnet' : 'Connecting to the agent service…'}
           </div>
         </header>
-
-        <section className="sf-balances">
-          <BalanceTile emoji="👛" label="Main wallet" hint="Your own money" value={bal.main} symbol={sym} tone="violet" />
-          <BalanceTile emoji="🏦" label="Vault" hint="Funds the agent cards" value={bal.vault} symbol={sym} tone="pink" />
-          <BalanceTile
-            emoji={agentStyle(activeAgent?.name ?? '').emoji}
-            label={`${activeAgent?.name ?? 'Agent'} wallet`}
-            hint="The agent holds nothing"
-            value={bal.agent}
-            symbol={sym}
-            tone="lime"
-          />
-        </section>
 
         {isPaused && (
           <section className="sf-pause">

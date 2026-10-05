@@ -11,17 +11,18 @@
   min-height: 100svh;
 }
 body:has(.sf) {
-  background: #0a0618;
+  background: #f4f1ff;
   margin: 0;
 }
 
 .sf {
-  --bg: #0a0618;
-  --card: rgba(255, 255, 255, 0.06);
-  --card-strong: rgba(255, 255, 255, 0.1);
-  --line: rgba(255, 255, 255, 0.13);
-  --text: #f6f3ff;
-  --dim: #a99fd0;
+  --bg: #f4f1ff;
+  --card: #ffffff;
+  --card-strong: #ece8ff;
+  --line: rgba(60, 35, 140, 0.16);
+  --text: #1b1440;
+  --dim: #6a6390;
+  --field: #f0ecff;
   --violet: #8b5cf6;
   --pink: #ff4fa3;
   --lime: #c8ff3d;
@@ -52,7 +53,7 @@ body:has(.sf) {
   position: absolute;
   border-radius: 50%;
   filter: blur(90px);
-  opacity: 0.55;
+  opacity: 0.22;
   pointer-events: none;
 }
 .sf-blob-a {
@@ -68,7 +69,7 @@ body:has(.sf) {
   background: var(--pink);
   top: 30%;
   right: -160px;
-  opacity: 0.4;
+  opacity: 0.16;
 }
 .sf-blob-c {
   width: 380px;
@@ -76,7 +77,7 @@ body:has(.sf) {
   background: var(--cyan);
   bottom: -160px;
   left: 28%;
-  opacity: 0.28;
+  opacity: 0.14;
 }
 
 .sf-shell {
@@ -310,7 +311,7 @@ body:has(.sf) {
   border-radius: 26px;
   background: var(--card);
   border: 1px solid var(--line);
-  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 34px rgba(60, 35, 140, 0.1);
 }
 .sf-card h2 {
   margin: 0 0 14px;
@@ -348,7 +349,7 @@ body:has(.sf) {
   gap: 4px;
   padding: 4px;
   border-radius: 16px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--field);
   border: 1px solid var(--line);
 }
 .sf-seg button {
@@ -421,7 +422,7 @@ body:has(.sf) {
   margin-top: 6px;
   height: 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(60, 35, 140, 0.1);
   overflow: hidden;
 }
 .sf-budget-track div {
@@ -516,7 +517,7 @@ body:has(.sf) {
   gap: 10px;
   padding: 10px 16px;
   border-radius: 18px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--field);
   border: 1px solid var(--line);
 }
 .sf-amount input {
@@ -566,7 +567,7 @@ body:has(.sf) {
   margin-top: 18px;
   padding: 12px 14px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(60, 35, 140, 0.05);
   font-size: 0.9rem;
   color: var(--dim);
 }
@@ -630,7 +631,7 @@ body:has(.sf) {
   align-items: start;
   padding: 12px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(60, 35, 140, 0.05);
   border: 1px solid transparent;
   animation: sf-in 0.35s ease;
 }
@@ -674,7 +675,7 @@ body:has(.sf) {
 .sf-via {
   padding: 1px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(60, 35, 140, 0.1);
   color: var(--text);
 }
 .sf-feed-reason {
@@ -738,4 +739,57 @@ body:has(.sf) {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Light theme: accents that were tuned for a dark page need darker shades
+   wherever they are used as text on a light surface. */
+.sf-brand {
+  color: #5b21b6;
+}
+.sf-live.on i {
+  background: #22a559;
+  box-shadow: 0 0 0 0 rgba(34, 165, 89, 0.6);
+}
+.sf-feed-meta a {
+  color: #5b21b6;
+}
+.sf-via {
+  background: #e7e1ff;
+  color: #3b2a8c;
+}
+.sf-feed-reason {
+  background: #ffe1e7;
+  color: #b4233f;
+}
+.sf-feed.bad {
+  background: #fff0f3;
+}
+.sf-status.ok {
+  background: #dcf7b0;
+  color: #3f6b00;
+}
+.sf-status.bad {
+  background: #ffd3dc;
+  color: #b4233f;
+}
+.sf-error {
+  color: #b4233f;
+}
+.sf button:focus-visible,
+.sf input:focus-visible {
+  outline-color: var(--violet);
+}
+.sf-header h1 span {
+  background: linear-gradient(90deg, #d12a7e, var(--violet) 55%, #0ea5c6);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* The activity panel keeps a slightly tinted surface so it reads apart from
+   the white checkout card and the page. */
+.sf-activity {
+  background: #ebe6ff;
+  border-color: #d3caff;
+}
+.sf-activity .sf-feed {
+  background: #ffffff;
 }
