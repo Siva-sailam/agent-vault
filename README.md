@@ -23,10 +23,10 @@ flowchart LR
     Owner["Owner<br/>(Phantom wallet)"] -->|signs setup, allow-list,<br/>revoke, withdraw| Panel["Control panel<br/>(React app)"]
     Panel -->|owner transactions| Program
 
-    Agent["Agent service<br/>(holds agent key server-side)"] -->|agent_spend| Program["Vault program<br/>(Anchor, on Solana)"]
+    Agent["Agent service<br/>(holds agent key server-side)"] -->|agent_spend| Program["Vault program<br/>(Anchor, on Solana)<br/>checks: registered agent, not revoked,<br/>merchant allow-listed, within 7-day budget"]
 
-    Program -->|check agent, revoked flag,<br/>merchant allow-list,<br/>7-day budget| Rules[("Rules account<br/>(PDA)")]
-    Rules -->|all checks pass| Token["SPL Token Program<br/>Transfer"]
+    Program -->|reads| Rules[("Rules account<br/>(PDA)")]
+    Program -->|CPI: Transfer, signed by authority PDA| Token["SPL Token Program"]
     Token -->|from| Vault[("Vault token account<br/>owned by authority PDA")]
     Token -->|to| Merchant["Merchant token account"]
 ```
@@ -86,7 +86,7 @@ cargo test
 ## Known limitations
 
 - **Devnet only.** Nothing here has been deployed to mainnet or audited.
-- **Single upgrade authority.** The program is upgradeable by one key.
+- **Single upgrade authority.** The program is upgradeable by one key. Whoever holds that key could deploy new program logic, so it is the real trust point. A production deployment would put it behind a multisig plus timelock, or make the program immutable.
 - **Plain `Transfer`, not `TransferChecked`.** The program's token transfers use SPL `Transfer`, so it is not yet compatible with the x402 "exact" scheme.
 - **The agent is scripted, not an AI model.** The agent service executes payments from a scenario or from the storefront form; no model decides what to buy. The on-chain enforcement is the part that is real.
 - **Public RPC rate limits.** The demo relies on public devnet RPC, which can throttle the control panel and agent service.
