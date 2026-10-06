@@ -2,7 +2,7 @@
 
 An on-chain vault program on Solana that lets AI agents pay merchants autonomously within owner-set limits, enforced by the program.
 
-**Demo video:** [video link]
+**Demo video:** coming soon
 
 ## What it does
 
