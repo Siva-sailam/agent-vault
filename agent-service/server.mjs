@@ -15,7 +15,7 @@ import { createServer } from 'node:http';
 
 const POLL_MS = 2000;
 
-export function startServer(port, { meta = {}, onOrder = null } = {}) {
+export function startServer(port, { meta = {}, onOrder = null, onRecoveryCosign = null } = {}) {
   const events = [];
   let nextId = 1;
   let pendingContinue = null; // { resolve, timer } while paused, else null
@@ -128,6 +128,18 @@ export function startServer(port, { meta = {}, onOrder = null } = {}) {
       return;
     }
 
+    // V2 recovery (owner + agent): the agent's signature is added here because
+    // agent keys never go to the browser. See recovery.mjs for the checks.
+    if (req.method === 'POST' && req.url === '/v2/recovery/cosign') {
+      if (!onRecoveryCosign) return send(res, 404, { error: 'Recovery is not enabled' });
+      try {
+        send(res, 200, await onRecoveryCosign(await readJson(req)));
+      } catch (e) {
+        send(res, 400, { error: e.message ?? String(e) });
+      }
+      return;
+    }
+
     if (req.method === 'GET' && req.url === '/status') {
       send(res, 200, { waitingForContinue: pendingContinue !== null });
       return;
@@ -136,7 +148,7 @@ export function startServer(port, { meta = {}, onOrder = null } = {}) {
     res.writeHead(404).end();
   });
 
-  server.listen(port, () => {
+  server.listen(port, '127.0.0.1', () => {
     console.log(`Agent service listening on http://localhost:${port}`);
   });
 

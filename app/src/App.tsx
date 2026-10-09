@@ -10,6 +10,8 @@ import { PhoneFrame } from './components/PhoneFrame';
 import { CardCarousel } from './components/CardCarousel';
 import { useVaultState } from './hooks/useVaultState';
 import { useApprovalAction } from './hooks/useApprovalAction';
+import { useRecoveryAction } from './hooks/useRecoveryAction';
+import { V2Card } from './components/V2Card';
 import { ACTIVE_VAULT, agentNameFor, merchantKeyOf, merchantLabelsFor } from './vaults';
 import { getAssociatedTokenAddress } from './lib/program';
 import type { AppClient } from './providers';
@@ -44,6 +46,7 @@ function Dashboard({ client }: { client: AppClient }) {
   const owner = connected && onDevnet ? address(connected.account.address) : null;
   const vault = useVaultState(client, owner, MINT);
   const approval = useApprovalAction(client);
+  const recovery = useRecoveryAction(client);
   const merchants = useMerchantRefs(MINT);
 
   if (!connected) {
@@ -80,6 +83,7 @@ function Dashboard({ client }: { client: AppClient }) {
       />
     )),
   ];
+  pages.push(<V2Card client={client} recovery={recovery} />);
 
   return (
     <div className="phone-content">
@@ -89,6 +93,7 @@ function Dashboard({ client }: { client: AppClient }) {
       </div>
       <CardCarousel pages={pages} />
       <ApprovalModal state={approval.state} onClose={approval.dismiss} />
+      <ApprovalModal state={recovery.state} onClose={recovery.dismiss} />
     </div>
   );
 }

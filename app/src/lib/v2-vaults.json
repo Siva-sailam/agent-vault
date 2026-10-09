@@ -1,0 +1,22 @@
+{
+  "owner": "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
+  "mint": "EMiGUP2fckjgjgHiTnG4237q3jY4PygPg6zZeVb5fNh9",
+  "decimals": 0,
+  "policyServer": "7kemAvExKVKwtnqtJnJhuEmGs6MPodVY5mWu6FFAgNfZ",
+  "agents": [
+    {
+      "name": "food-ordering-agent-v2",
+      "v1Name": "food-ordering-agent",
+      "address": "9TKrFoKECTzYxY94ipdSffMbnen1mdqSh27HhabsHM13",
+      "multisig": "HmzkKgLRwRUHNGcPbJvAofRU5ymUT4L5WNJK5h2Rcqcx",
+      "vault": "2mJtH5JRAdRvcHoTP7BA6iaViC8MYn4P6nJnWTmYREFx"
+    },
+    {
+      "name": "shopping-agent-v2",
+      "v1Name": "shopping-agent",
+      "address": "oLBoaKP5vm1zHoyBYmpnETN5hsszGBeBaik3wze9SKm",
+      "multisig": "DUPmqSMB1V2wBMZfSr93fPYgubpNaaa6e6wAxbX5cUhV",
+      "vault": "5hpYPyKVsf9PeK1xz2Jd1RivuiBTVxPFVNkjw6BarjYp"
+    }
+  ]
+}

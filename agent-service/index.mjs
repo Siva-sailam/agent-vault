@@ -35,6 +35,7 @@ import {
 } from '@solana/kit';
 import { startServer } from './server.mjs';
 import { createV2Path, loadV2Config, v2NameOf } from './v2.mjs';
+import { createRecovery } from './recovery.mjs';
 import {
   getVaultPdas,
   getAssociatedTokenAddress,
@@ -252,7 +253,12 @@ async function main() {
     scenario: opts.scenario,
     v2Agents: v2 ? Object.keys(config.agents).filter((n) => v2.signers[v2NameOf(n)]) : [],
   };
-  const { emit, waitForContinue } = startServer(opts.port, { meta, onOrder });
+  const recovery = v2 ? await createRecovery({ v2: v2Config, agentSigners: v2.signers }) : null;
+  const { emit, waitForContinue } = startServer(opts.port, {
+    meta,
+    onOrder,
+    onRecoveryCosign: recovery ? (body) => recovery.cosign(body) : null,
+  });
 
   console.log('Fee payer:  ', feePayerSigner.address);
   for (const [name, s] of Object.entries(agentSigners)) console.log(`Agent ${name}:`.padEnd(13), s.address);
