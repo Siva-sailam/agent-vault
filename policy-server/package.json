@@ -9,8 +9,8 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "@solana-program/system": "latest",
-    "@solana-program/token": "latest",
+    "@solana-program/system": "0.15.0",
+    "@solana-program/token": "0.17.0",
     "@solana/kit": "^8.3.0",
     "better-sqlite3": "^13.0.3"
   }
