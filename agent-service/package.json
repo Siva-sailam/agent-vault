@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.mjs",
     "scenario": "node index.mjs --scenario",
+    "scenario:v2": "node index.mjs --scenario --v2",
     "agent": "node agent.mjs"
   },
   "dependencies": {

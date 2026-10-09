@@ -101,5 +101,10 @@ export async function createV2Path({ rpc, v2, merchantAtas }) {
     }
   }
 
-  return { signers, authorize, agentBudget, buildPartiallySigned };
+  async function policyState() {
+    const res = await fetch(`${POLICY_SERVER_URL}/v2/state`, { signal: AbortSignal.timeout(5000) });
+    return res.json();
+  }
+
+  return { signers, authorize, agentBudget, policyState, buildPartiallySigned };
 }

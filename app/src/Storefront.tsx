@@ -7,6 +7,7 @@ import { fetchAccountBytes, fetchTokenBalance } from './lib/rpcHelpers';
 import { useApprovalAction } from './hooks/useApprovalAction';
 import { ApprovalModal } from './components/ApprovalModal';
 import { agentStyle, merchantStyle } from './storefront/merchantStyle';
+import { usePolicyState } from './hooks/usePolicyState';
 import type { AppClient } from './providers';
 import './App.css';
 import './storefront/storefront.css';
@@ -30,8 +31,12 @@ type AgentEvent =
       amount: number;
       success: boolean;
       reason: string | null;
-      signature: string;
-      solscanUrl: string;
+      signature: string | null;
+      solscanUrl: string | null;
+      version?: 'v1' | 'v2';
+      refusedBeforeSigning?: boolean;
+      detail?: string | null;
+      errorName?: string | null;
       spentSoFar: number | null;
       weeklyBudget: number | null;
     }
@@ -65,6 +70,8 @@ type Meta = {
   agents: { name: string; address: string; merchants: string[] }[];
   merchants: string[];
   scenario: boolean;
+  /** Agents (V1 names) that also have a V2 (policy server) path. */
+  v2Agents?: string[];
 };
 
 /** What the checkout may offer — read from the agent service so the page and
@@ -216,7 +223,11 @@ type FeedItem = {
   amount: number;
   success: boolean;
   reason: string | null;
-  solscanUrl?: string;
+  solscanUrl?: string | null;
+  version?: 'v1' | 'v2';
+  refusedBeforeSigning?: boolean;
+  detail?: string | null;
+  errorName?: string | null;
 };
 
 function timeLabel(ts: number) {
@@ -236,6 +247,7 @@ function Avatar({ label, size = 40 }: { label: string; size?: number }) {
 // Page
 // ---------------------------------------------------------------------------
 type Mode = 'agent' | 'wallet';
+type Version = 'v1' | 'v2';
 
 export function Storefront({ client }: { client: AppClient }) {
   const { events, connected } = useAgentEvents();
@@ -243,6 +255,7 @@ export function Storefront({ client }: { client: AppClient }) {
   const sym = meta?.symbol ?? ACTIVE_VAULT.symbol;
 
   const [mode, setMode] = useState<Mode>('agent');
+  const [versionPick, setVersionPick] = useState<Version>('v1');
   const [agentName, setAgentName] = useState('');
   const [merchantPick, setMerchantPick] = useState('');
   const [amount, setAmount] = useState('20');
@@ -266,6 +279,9 @@ export function Storefront({ client }: { client: AppClient }) {
     }
     return meta.agents.map((a) => ({ title: agentStyle(a.name).category, merchants: a.merchants }));
   }, [meta, mode, activeAgent]);
+  const hasV2 = Boolean(activeAgent && meta?.v2Agents?.includes(activeAgent.name));
+  const version: Version = mode === 'agent' && hasV2 ? versionPick : 'v1';
+  const policy = usePolicyState();
   const offered = useMemo(() => groups.flatMap((g) => g.merchants), [groups]);
   const merchant = offered.includes(merchantPick) ? merchantPick : (offered[0] ?? '');
 
@@ -305,7 +321,11 @@ export function Storefront({ client }: { client: AppClient }) {
   }, [events]);
 
   const chainBudgets = useChainBudgets(meta, nonce);
-  const budget = activeAgent ? chainBudgets.get(activeAgent.name) : undefined;
+  const v2Budget = (() => {
+    const a = policy.state?.agents.find((x) => x.name === `${activeAgent?.name}-v2`);
+    return a ? { spent: a.spent, limit: a.weeklyBudget } : undefined;
+  })();
+  const budget = version === 'v2' ? v2Budget : activeAgent ? chainBudgets.get(activeAgent.name) : undefined;
 
   const feed: FeedItem[] = useMemo(() => {
     const fromService: FeedItem[] = events
@@ -320,6 +340,10 @@ export function Storefront({ client }: { client: AppClient }) {
         success: e.success,
         reason: e.reason,
         solscanUrl: e.solscanUrl,
+        version: e.version ?? 'v1',
+        refusedBeforeSigning: e.refusedBeforeSigning,
+        detail: e.detail,
+        errorName: e.errorName,
       }));
     return [...fromService, ...walletFeed].sort((a, b) => b.ts - a.ts);
   }, [events, walletFeed]);
@@ -336,7 +360,7 @@ export function Storefront({ client }: { client: AppClient }) {
       const res = await fetch(`${AGENT_SERVICE_URL}/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent: activeAgent.name, merchant, amount: amountNum }),
+        body: JSON.stringify({ agent: activeAgent.name, merchant, amount: amountNum, version }),
       });
       const body = await res.json();
       // A payment the program refuses is a normal result and shows up in the
@@ -369,7 +393,10 @@ export function Storefront({ client }: { client: AppClient }) {
     connected &&
     (mode === 'agent' ? Boolean(activeAgent) : walletOnDevnet && !insufficientMain);
 
-  const fromLabel = mode === 'agent' ? `${activeAgent?.name ?? 'agent'} card · paid from the vault` : 'your main wallet';
+  const fromLabel =
+    mode === 'agent'
+      ? `${activeAgent?.name ?? 'agent'} card · paid from the ${version === 'v2' ? 'V2 multisig vault' : 'vault'}`
+      : 'your main wallet';
 
   return (
     <div className="sf">
@@ -425,6 +452,20 @@ export function Storefront({ client }: { client: AppClient }) {
                     </button>
                   ))}
                 </div>
+                {hasV2 && (
+                  <>
+                    <label className="sf-label">Enforcement</label>
+                    <div className="sf-seg" role="tablist" aria-label="Rules enforced by">
+                      <button className={version === 'v1' ? 'on' : ''} onClick={() => setVersionPick('v1')} role="tab" aria-selected={version === 'v1'}>
+                        V1 · on-chain program
+                      </button>
+                      <button className={version === 'v2' ? 'on' : ''} onClick={() => setVersionPick('v2')} role="tab" aria-selected={version === 'v2'}>
+                        V2 · policy server
+                      </button>
+                    </div>
+                    {version === 'v2' && !policy.online && <p className="sf-error">Policy server is offline — V2 payments will be refused.</p>}
+                  </>
+                )}
                 {budget && (
                   <div className="sf-budget">
                     <div className="sf-budget-row">
@@ -503,7 +544,9 @@ export function Storefront({ client }: { client: AppClient }) {
             {error && <p className="sf-error">{error}</p>}
             <p className="sf-fine">
               {mode === 'agent'
-                ? 'The agent signs this itself. The vault’s rules decide whether it goes through.'
+                ? version === 'v2'
+                  ? 'The agent signs, then the policy server checks the rules BEFORE it co-signs. A refused payment never becomes a transaction.'
+                  : 'The agent signs this itself. The vault’s rules decide whether it goes through.'
                 : 'You approve this in your wallet. The vault and the agent are not involved.'}
             </p>
           </section>
@@ -528,6 +571,7 @@ export function Storefront({ client }: { client: AppClient }) {
                   </div>
                   <div className="sf-feed-meta">
                     <span className={`sf-via ${e.via}`}>{e.via === 'agent' ? `🤖 ${e.agent ?? 'agent'}` : '👛 main wallet'}</span>
+                    {e.via === 'agent' && <span className="sf-via">{e.version === 'v2' ? 'V2 · policy server' : 'V1 · on-chain'}</span>}
                     <span>{timeLabel(e.ts)}</span>
                     {e.solscanUrl && (
                       <a href={e.solscanUrl} target="_blank" rel="noreferrer">
@@ -535,7 +579,35 @@ export function Storefront({ client }: { client: AppClient }) {
                       </a>
                     )}
                   </div>
-                  {!e.success && e.reason && <div className="sf-feed-reason">{e.reason}</div>}
+                  {!e.success && e.via === 'agent' && e.version === 'v2' && e.refusedBeforeSigning && (
+                    <div className="sf-feed-reason">
+                      <b>Refused BEFORE SIGNING by the policy server</b>
+                      <br />
+                      Reason: {e.reason}
+                      {e.detail ? ` (${e.detail})` : ''}
+                      <br />
+                      No transaction was created. No fee.
+                    </div>
+                  )}
+                  {!e.success && e.via === 'agent' && e.version === 'v2' && !e.refusedBeforeSigning && (
+                    <div className="sf-feed-reason">
+                      <b>Approved by the policy server, but the payment failed</b>
+                      <br />
+                      Reason: {e.reason}
+                      {e.detail ? ` (${e.detail})` : ''}
+                    </div>
+                  )}
+                  {!e.success && e.via === 'agent' && e.version !== 'v2' && e.reason && (
+                    <div className="sf-feed-reason">
+                      <b>Refused ON-CHAIN by the vault program</b>
+                      <br />
+                      {e.errorName ? <>Error: {e.errorName} — </> : null}
+                      {e.reason}
+                      <br />
+                      The transaction reached the chain and failed — the fee was still paid.
+                    </div>
+                  )}
+                  {!e.success && e.via === 'wallet' && e.reason && <div className="sf-feed-reason">{e.reason}</div>}
                 </div>
                 <span className={`sf-status ${e.success ? 'ok' : 'bad'}`}>{e.success ? 'Paid' : 'Refused'}</span>
               </div>
