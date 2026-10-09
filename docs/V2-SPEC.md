@@ -130,3 +130,43 @@ recovery path documented not built; one agent; server key is a plain key file
 (production: HSM / MPC — e.g. Fireblocks); devnet only.
 
 Start now with: create branch v2, save docs/V2-SPEC.md, then do V2-M1 and report.
+
+
+==================================================================
+SCOPE CHANGE 1 (supersedes the "one agent only" and "recovery NOT built" parts above)
+==================================================================
+1. TWO AGENTS. Add shopping-agent-v2: a NEW key (do not reuse the V1 shopping
+   agent key), its OWN 2-of-3 multisig [owner (my Phantom), policy-server,
+   shopping-agent-v2], its OWN aUSD vault token account. Never put both agents
+   in one multisig (the two agents together could bypass the server).
+   New milestone V2-M1b: create it the same way as M1 (rerunnable script).
+   Seed M2 with both agents: 200 aUSD weekly budget each, each agent's own
+   4 merchants from demo-vault.config.json.
+
+2. BUILD THE RECOVERY PATH (owner + agent, server not involved).
+   New milestone V2-M3b:
+   - Control panel V2 section: "Recover funds" per vault. Builds ONE
+     TransferChecked from that vault to MY OWN aUSD token account,
+     multiSigners = [owner, that vault's agent], fee payer = owner (Phantom).
+   - The agent signature comes from the agent service (agent keys never go to
+     the browser) via a localhost endpoint POST /v2/recovery/cosign. Before
+     signing it MUST verify: exactly one TransferChecked, source = that
+     agent's own V2 vault, destination = the owner's aUSD account, correct
+     mint/decimals, fee payer = owner. Anything else -> refuse
+     (RecoveryDestinationNotOwner / TransactionMismatch).
+   - Phantom signs and submits. Verify in the installed library/wallet code
+     how partial signing order works with Phantom before building; tell me
+     if Phantom cannot sign a partially-signed transaction.
+   - Document honestly: the "only back to owner" rule is enforced by the
+     agent service, not on-chain.
+
+3. TESTS (add to M5): recovery to owner passes; recovery to any other account
+   refused; shopping agent cannot spend from the food vault (and vice versa).
+
+UPDATED PRE-APPROVED DEVNET TRANSACTIONS (in addition to the M1 list):
+- M1b: create multisig #2, create vault #2, mint 300 aUSD into vault #2.
+- Test payments: max 10 per agent, max 20 aUSD each, only to that agent's
+  own demo merchants.
+- Recovery: max 2 recovery transfers, max 20 aUSD each, only to my own aUSD
+  account. (These need my Phantom approval, so I'll click them myself.)
+- Still ZERO V1 transactions.

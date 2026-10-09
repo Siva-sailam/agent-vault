@@ -1,13 +1,15 @@
 // V2-M1 setup (devnet only). Idempotent: each step is skipped if its result
 // already exists on chain.
 //
-//   1. Generates keys in ~/agent-vault/keys (mode 600, never printed):
-//      policy-server, food-ordering-agent-v2, v2-multisig, v2-vault-token-account.
-//   2. tx1: create the SPL Token 2-of-3 multisig [owner(Phantom), server, agent].
-//   3. tx2: create the aUSD token account owned by the multisig (the V2 vault).
-//   4. tx3: mint 300 aUSD into the V2 vault (CLI wallet = aUSD mint authority).
-//   5. tx4: transfer 0.5 SOL from the CLI wallet to the server key (fees).
-//   6. Writes policy-server/v2.config.json (public keys only).
+//   For EACH agent, with its OWN multisig and vault (never share a multisig
+//   between agents - two agents together could bypass the server):
+//     food-ordering-agent-v2, shopping-agent-v2
+//   1. Generates keys in ~/agent-vault/keys (mode 600, never printed).
+//   2. Creates the SPL Token 2-of-3 multisig [owner(Phantom), server, agent].
+//   3. Creates the aUSD token account owned by that multisig (the agent's V2 vault).
+//   4. Mints 300 aUSD into that vault (CLI wallet = aUSD mint authority).
+//   Once: tops the server key up to 0.5 SOL for fees (skipped if funded).
+//   Writes policy-server/v2.config.json (public keys only).
 //
 //   node scripts/setup-v2.mjs
 //
@@ -76,9 +78,13 @@ const cli = await createKeyPairSignerFromBytes(
   Uint8Array.from(JSON.parse(readFileSync(join(homedir(), '.config', 'solana', 'id.json'), 'utf8'))),
 );
 const server = await loadOrCreateSigner('policy-server.json');
-const agent = await loadOrCreateSigner('food-ordering-agent-v2.json');
-const multisig = await loadOrCreateSigner('v2-multisig.json');
-const vault = await loadOrCreateSigner('v2-vault-token-account.json');
+
+// Key file names for the food agent are the original M1 names (so reruns skip
+// what already exists); the shopping agent gets its own set.
+const AGENT_DEFS = [
+  { name: 'food-ordering-agent-v2', agentFile: 'food-ordering-agent-v2.json', multisigFile: 'v2-multisig.json', vaultFile: 'v2-vault-token-account.json' },
+  { name: 'shopping-agent-v2', agentFile: 'shopping-agent-v2.json', multisigFile: 'v2-multisig-shopping.json', vaultFile: 'v2-vault-token-account-shopping.json' },
+];
 
 async function send(label, instructions) {
   const { value: blockhash } = await rpc.getLatestBlockhash().send();
@@ -102,67 +108,85 @@ if (mint.data.decimals !== DECIMALS) throw new Error(`mint decimals ${mint.data.
 const mintAuth = mint.data.mintAuthority.__option === 'Some' ? mint.data.mintAuthority.value : null;
 if (mintAuth !== cli.address) throw new Error(`CLI wallet is not the aUSD mint authority (${mintAuth})`);
 
-const sigs = {};
+const prev = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : {};
+const agentsOut = {};
 
-// tx1 — 2-of-3 multisig [owner, server, agent]
-if ((await fetchMaybeMultisig(rpc, multisig.address, { commitment: 'confirmed' })).exists) {
-  console.log('multisig: already exists, skipping');
-} else {
-  const space = getMultisigSize();
-  const rent = await rpc.getMinimumBalanceForRentExemption(BigInt(space)).send();
-  sigs.createMultisig = await send('1. create multisig', [
-    getCreateAccountInstruction({ payer: cli, newAccount: multisig, lamports: rent, space, programAddress: TOKEN_PROGRAM_ADDRESS }),
-    getInitializeMultisigInstruction({ multisig: multisig.address, m: 2, signers: [OWNER, server.address, agent.address] }),
-  ]);
+for (const def of AGENT_DEFS) {
+  console.log(`\n== ${def.name}`);
+  const agent = await loadOrCreateSigner(def.agentFile);
+  const multisig = await loadOrCreateSigner(def.multisigFile);
+  const vault = await loadOrCreateSigner(def.vaultFile);
+  const sigs = {};
+  // The M1 config kept the food agent's tx signatures in a flat top-level object.
+  const prevSigs = prev.agents?.[def.name]?.setupTransactions ?? (def.name === 'food-ordering-agent-v2' ? prev.setupTransactions : {}) ?? {};
+
+  // 2-of-3 multisig [owner, server, agent]
+  if ((await fetchMaybeMultisig(rpc, multisig.address, { commitment: 'confirmed' })).exists) {
+    console.log('multisig: already exists, skipping');
+  } else {
+    const space = getMultisigSize();
+    const rent = await rpc.getMinimumBalanceForRentExemption(BigInt(space)).send();
+    sigs.createMultisig = await send('create multisig', [
+      getCreateAccountInstruction({ payer: cli, newAccount: multisig, lamports: rent, space, programAddress: TOKEN_PROGRAM_ADDRESS }),
+      getInitializeMultisigInstruction({ multisig: multisig.address, m: 2, signers: [OWNER, server.address, agent.address] }),
+    ]);
+  }
+
+  // vault token account owned by the multisig
+  if ((await fetchMaybeToken(rpc, vault.address, { commitment: 'confirmed' })).exists) {
+    console.log('vault token account: already exists, skipping');
+  } else {
+    const space = getTokenSize();
+    const rent = await rpc.getMinimumBalanceForRentExemption(BigInt(space)).send();
+    sigs.createVault = await send('create V2 vault token account', [
+      getCreateAccountInstruction({ payer: cli, newAccount: vault, lamports: rent, space, programAddress: TOKEN_PROGRAM_ADDRESS }),
+      getInitializeAccount3Instruction({ account: vault.address, mint: MINT, owner: multisig.address }),
+    ]);
+  }
+
+  // mint 300 aUSD (only if the vault is empty, so reruns never double-mint)
+  const vaultAcc = await fetchMaybeToken(rpc, vault.address, { commitment: 'confirmed' });
+  if (vaultAcc.exists && vaultAcc.data.amount > 0n) {
+    console.log(`mint: vault already holds ${vaultAcc.data.amount} aUSD, skipping`);
+  } else {
+    sigs.mint = await send('mint 300 aUSD', [
+      getMintToCheckedInstruction({ mint: MINT, token: vault.address, mintAuthority: cli, amount: MINT_AMOUNT, decimals: DECIMALS }),
+    ]);
+  }
+
+  agentsOut[def.name] = {
+    address: agent.address,
+    keyFile: def.agentFile,
+    multisig: { address: multisig.address, m: 2, signers: [OWNER, server.address, agent.address] },
+    vault: vault.address,
+    setupTransactions: { ...prevSigs, ...sigs },
+  };
 }
 
-// tx2 — vault token account owned by the multisig
-if ((await fetchMaybeToken(rpc, vault.address, { commitment: 'confirmed' })).exists) {
-  console.log('vault token account: already exists, skipping');
-} else {
-  const space = getTokenSize();
-  const rent = await rpc.getMinimumBalanceForRentExemption(BigInt(space)).send();
-  sigs.createVault = await send('2. create V2 vault token account', [
-    getCreateAccountInstruction({ payer: cli, newAccount: vault, lamports: rent, space, programAddress: TOKEN_PROGRAM_ADDRESS }),
-    getInitializeAccount3Instruction({ account: vault.address, mint: MINT, owner: multisig.address }),
-  ]);
-}
-
-// tx3 — mint 300 aUSD (only if the vault is empty, so reruns never double-mint)
-const vaultAcc = await fetchMaybeToken(rpc, vault.address, { commitment: 'confirmed' });
-if (vaultAcc.exists && vaultAcc.data.amount > 0n) {
-  console.log(`mint: vault already holds ${vaultAcc.data.amount} aUSD, skipping`);
-} else {
-  sigs.mint = await send('3. mint 300 aUSD', [
-    getMintToCheckedInstruction({ mint: MINT, token: vault.address, mintAuthority: cli, amount: MINT_AMOUNT, decimals: DECIMALS }),
-  ]);
-}
-
-// tx4 — fee money for the server (top up to 0.5 SOL, never more)
+// fee money for the server (top up to 0.5 SOL, never more)
 const serverBal = (await rpc.getBalance(server.address, { commitment: 'confirmed' }).send()).value;
+let fundSig = prev.serverFundTransaction ?? prev.setupTransactions?.fundServer;
 if (serverBal >= SERVER_SOL) {
-  console.log(`server SOL: already ${serverBal} lamports, skipping`);
+  console.log(`\nserver SOL: already ${serverBal} lamports, skipping`);
 } else {
-  sigs.fundServer = await send('4. fund server with SOL', [
+  fundSig = await send('fund server with SOL', [
     getTransferSolInstruction({ source: cli, destination: server.address, amount: lamports(SERVER_SOL - serverBal) }),
   ]);
 }
 
-// Public keys only.
+// Public keys only. `multisig` / `vault` at top level stay as the FOOD agent's
+// (M1 layout, used by the M2 server until it is updated for two agents).
+const food = agentsOut['food-ordering-agent-v2'];
 const config = {
   network: 'devnet',
   owner: OWNER,
   mint: MINT,
   decimals: DECIMALS,
-  multisig: { address: multisig.address, m: 2, signers: [OWNER, server.address, agent.address] },
-  vault: vault.address,
+  multisig: food.multisig,
+  vault: food.vault,
   policyServer: { address: server.address, keyFile: 'policy-server.json' },
-  agents: { 'food-ordering-agent-v2': { address: agent.address, keyFile: 'food-ordering-agent-v2.json' } },
-  setupTransactions: sigs,
+  serverFundTransaction: fundSig,
+  agents: agentsOut,
 };
-if (existsSync(OUT)) {
-  const prev = JSON.parse(readFileSync(OUT, 'utf8'));
-  config.setupTransactions = { ...prev.setupTransactions, ...sigs };
-}
 writeFileSync(OUT, JSON.stringify(config, null, 2) + '\n');
-console.log(`wrote ${OUT}`);
+console.log(`\nwrote ${OUT}`);
