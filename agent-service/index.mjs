@@ -14,7 +14,7 @@
 //     on-chain; the storefront's Continue button is a manual override.
 //
 // Usage:
-//   node index.mjs [--config <file>] [--scenario] [--agent <name>] [--port <port>] [--check]
+//   node index.mjs [--config <file>] [--scenario [--v2]] [--agent <name>] [--port <port>] [--check]
 // Defaults: --config demo-vault.config.json --port 4021; scenario agent = the
 // config's scenario.agent. --check loads the config and prints the plan,
 // sends nothing. Use --config vault-b.config.json for the original Vault B.
@@ -34,6 +34,8 @@ import {
   createKeyPairSignerFromBytes,
 } from '@solana/kit';
 import { startServer } from './server.mjs';
+import { createV2Path, loadV2Config, v2NameOf } from './v2.mjs';
+import { createRecovery } from './recovery.mjs';
 import {
   getVaultPdas,
   getAssociatedTokenAddress,
@@ -41,6 +43,7 @@ import {
   ixAgentSpend,
   decodeVaultRules,
   explainTransactionError,
+  programErrorInfo,
 } from './lib/program.mjs';
 
 const DEVNET_URL = 'https://api.devnet.solana.com';
@@ -49,13 +52,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { config: 'demo-vault.config.json', agent: null, port: 4021, check: false, scenario: false };
+  const opts = { config: 'demo-vault.config.json', agent: null, port: 4021, check: false, scenario: false, v2: false };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--scenario') opts.scenario = true;
     else if (args[i] === '--config') opts.config = args[++i];
     else if (args[i] === '--agent') opts.agent = args[++i];
     else if (args[i] === '--port') opts.port = Number(args[++i]);
     else if (args[i] === '--check') opts.check = true;
+    else if (args[i] === '--v2') opts.v2 = true;
   }
   return opts;
 }
@@ -119,7 +123,7 @@ async function main() {
   const pdas = await getVaultPdas(owner, mint);
 
   console.log('Config:     ', opts.config, `(${config.name ?? 'unnamed'})`);
-  console.log('Mode:       ', opts.scenario ? 'scenario + orders' : 'manual orders (add --scenario for the script)');
+  console.log('Mode:       ', opts.scenario ? `scenario${opts.v2 ? ' (V2 policy server)' : ''} + orders` : 'manual orders (add --scenario for the script)');
   console.log('Vault owner:', owner);
   console.log('Mint:       ', mint);
   console.log('Rules PDA:  ', pdas.rules);
@@ -147,6 +151,11 @@ async function main() {
   const feePayerSigner = await createKeyPairSignerFromBytes(
     Uint8Array.from(JSON.parse(readFileSync(join(homedir(), '.config', 'solana', 'id.json'), 'utf8'))),
   );
+
+  // V2 (off-chain policy server) path — only if V2 was set up (policy-server/v2.config.json).
+  const v2Config = loadV2Config();
+  const v2 = v2Config ? await createV2Path({ rpc, v2: v2Config, merchantAtas }) : null;
+  if (opts.v2 && !v2?.signers[v2NameOf(scenarioAgent)]) throw new Error(`--v2 needs a V2 setup for "${scenarioAgent}"`);
 
   async function agentRules(name) {
     const info = await rpc.getAccountInfo(pdas.rules, { encoding: 'base64' }).send();
@@ -178,12 +187,14 @@ async function main() {
     console.log();
 
     const fields = {
+      version: 'v1',
       agent: agentName,
       merchant: merchantKeyFor(label),
       merchantLabel: label,
       amount,
       success,
       reason,
+      errorName: success ? null : (programErrorInfo(err)?.name ?? null),
       signature,
       solscanUrl,
       spentSoFar: agentState ? Number(agentState.spentSoFar) : null,
@@ -193,13 +204,46 @@ async function main() {
     return fields;
   }
 
+  /** V2: agent -> policy server -> (co-sign + submit). A refusal creates no transaction and costs no fee. */
+  async function spendV2(agentName, label, amount) {
+    const v2Name = v2NameOf(agentName);
+    console.log(`[V2] ${v2Name} ordering from ${label} — ${amount} ${symbol} via policy server...`);
+    const res = await v2.authorize(v2Name, label, amount);
+    const success = res.approved === true;
+    const budget = await v2.agentBudget(v2Name);
+    const solscanUrl = success ? `https://solscan.io/tx/${res.signature}?cluster=devnet` : null;
+    console.log(success ? `  ✓ approved + confirmed — ${solscanUrl}` : `  ✗ refused BEFORE SIGNING: ${res.reason}${res.detail ? ` (${res.detail})` : ''} — no transaction, no fee`);
+    console.log();
+    const fields = {
+      version: 'v2',
+      agent: agentName,
+      merchant: merchantKeyFor(label),
+      merchantLabel: label,
+      amount,
+      success,
+      reason: success ? null : res.reason,
+      detail: success ? null : (res.detail ?? null),
+      refusedBeforeSigning: !success && res.reason !== 'SubmissionFailed' && res.reason !== 'SimulationFailed',
+      signature: success ? res.signature : null,
+      solscanUrl,
+      spentSoFar: budget?.spent ?? null,
+      weeklyBudget: budget?.weeklyBudget ?? null,
+    };
+    emit('spend', fields);
+    return fields;
+  }
+
   /** Storefront order form → one agent payment. Validates input; a payment the
    * program refuses is NOT an error here — it is a result with a reason. */
-  function onOrder({ agent, merchant, amount }) {
+  function onOrder({ agent, merchant, amount, version = 'v1' }) {
     if (!agentSigners[agent]) throw new Error(`Unknown agent "${agent}"`);
     if (!config.merchants[merchant]) throw new Error(`Unknown merchant "${merchant}"`);
     const n = Number(amount);
     if (!Number.isInteger(n) || n < 1 || n > 1_000_000) throw new Error('Amount must be a whole number from 1 to 1,000,000');
+    if (version === 'v2') {
+      if (!v2?.signers[v2NameOf(agent)]) throw new Error(`No V2 setup for agent "${agent}"`);
+      return enqueue(() => spendV2(agent, merchant, n));
+    }
     return enqueue(() => spend(agent, merchant, n));
   }
 
@@ -212,8 +256,14 @@ async function main() {
     })),
     merchants: Object.keys(config.merchants),
     scenario: opts.scenario,
+    v2Agents: v2 ? Object.keys(config.agents).filter((n) => v2.signers[v2NameOf(n)]) : [],
   };
-  const { emit, waitForContinue } = startServer(opts.port, { meta, onOrder });
+  const recovery = v2 ? await createRecovery({ v2: v2Config, agentSigners: v2.signers }) : null;
+  const { emit, waitForContinue } = startServer(opts.port, {
+    meta,
+    onOrder,
+    onRecoveryCosign: recovery ? (body) => recovery.cosign(body) : null,
+  });
 
   console.log('Fee payer:  ', feePayerSigner.address);
   for (const [name, s] of Object.entries(agentSigners)) console.log(`Agent ${name}:`.padEnd(13), s.address);
@@ -256,11 +306,31 @@ async function main() {
     throw new Error(`Unknown pause condition ${JSON.stringify(until)}`);
   }
 
-  emit('info', { message: `Demo scenario starting. Agent: ${scenarioAgent}` });
+  /** V2 pause conditions: read the policy server's rules instead of the chain. */
+  function conditionForV2(until) {
+    if (!until) return null;
+    const v2Name = v2NameOf(scenarioAgent);
+    if (until.merchantOff) {
+      return async () => {
+        const st = await v2.policyState();
+        const agentKey = st.agents.find((a) => a.name === v2Name)?.pubkey;
+        const m = st.merchants.find((x) => x.agent === agentKey && x.label === until.merchantOff);
+        return m != null && !m.enabled;
+      };
+    }
+    if (until.revoked) return async () => (await v2.policyState()).agents.find((a) => a.name === v2Name)?.revoked === true;
+    throw new Error(`Unknown pause condition ${JSON.stringify(until)}`);
+  }
+
+  emit('info', { message: `Demo scenario starting${opts.v2 ? ' (V2 policy server)' : ''}. Agent: ${scenarioAgent}` });
 
   for (const step of steps) {
-    if (step.spend) await enqueue(() => spend(scenarioAgent, step.spend[0], step.spend[1]));
-    else await waitForContinue(step.pause, conditionFor(step.until));
+    if (step.spend) {
+      await enqueue(() => (opts.v2 ? spendV2(scenarioAgent, step.spend[0], step.spend[1]) : spend(scenarioAgent, step.spend[0], step.spend[1])));
+    } else {
+      const text = opts.v2 ? step.pause.replace('control panel', 'control panel (V2 policy section)') : step.pause;
+      await waitForContinue(text, (opts.v2 ? conditionForV2 : conditionFor)(step.until));
+    }
   }
 
   emit('complete', { message: 'Scenario complete.' });

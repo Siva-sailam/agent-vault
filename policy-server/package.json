@@ -1,0 +1,17 @@
+{
+  "name": "policy-server",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup-v2.mjs",
+    "start": "node src/server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@solana-program/system": "latest",
+    "@solana-program/token": "latest",
+    "@solana/kit": "^8.3.0",
+    "better-sqlite3": "^13.0.3"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "network": "devnet",
+  "owner": "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
+  "mint": "EMiGUP2fckjgjgHiTnG4237q3jY4PygPg6zZeVb5fNh9",
+  "decimals": 0,
+  "multisig": {
+    "address": "HmzkKgLRwRUHNGcPbJvAofRU5ymUT4L5WNJK5h2Rcqcx",
+    "m": 2,
+    "signers": [
+      "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
+      "7kemAvExKVKwtnqtJnJhuEmGs6MPodVY5mWu6FFAgNfZ",
+      "9TKrFoKECTzYxY94ipdSffMbnen1mdqSh27HhabsHM13"
+    ]
+  },
+  "vault": "2mJtH5JRAdRvcHoTP7BA6iaViC8MYn4P6nJnWTmYREFx",
+  "policyServer": {
+    "address": "7kemAvExKVKwtnqtJnJhuEmGs6MPodVY5mWu6FFAgNfZ",
+    "keyFile": "policy-server.json"
+  },
+  "serverFundTransaction": "3UxynjaEso32rgYBM33hJzToC6thcg1jH6uyUcSbwFswHfgZVeLcmF3sWkCuna4VgyVysfU1y2aB6ZZnjJ1CUoeA",
+  "agents": {
+    "food-ordering-agent-v2": {
+      "address": "9TKrFoKECTzYxY94ipdSffMbnen1mdqSh27HhabsHM13",
+      "keyFile": "food-ordering-agent-v2.json",
+      "multisig": {
+        "address": "HmzkKgLRwRUHNGcPbJvAofRU5ymUT4L5WNJK5h2Rcqcx",
+        "m": 2,
+        "signers": [
+          "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
+          "7kemAvExKVKwtnqtJnJhuEmGs6MPodVY5mWu6FFAgNfZ",
+          "9TKrFoKECTzYxY94ipdSffMbnen1mdqSh27HhabsHM13"
+        ]
+      },
+      "vault": "2mJtH5JRAdRvcHoTP7BA6iaViC8MYn4P6nJnWTmYREFx",
+      "setupTransactions": {
+        "createMultisig": "2iufC1g4nVdqqyD2XpTuw6agy5mSoSHoFwHR3kyDwxriThwAi69QZuwDuR6F2PhXoYcAz1FXyo8UeVEC2UsFHrYx",
+        "createVault": "3AQ24WcLYefgTgXpzCD94VkfXLYpeGUL2rCHAgTiG7iAkwaZNBWbEdk6rzzZX5JpqQopeTFin5149eaVEpGJHbEU",
+        "mint": "2PB8QPirFVHtrBjE7N9NcTdUBDYQUU7RmwVauM7NoMaV1nQwEsrhYa3sTcBnf2MAiZ8Rc5RKfm3JEMvP4kRZc3Y8",
+        "fundServer": "3UxynjaEso32rgYBM33hJzToC6thcg1jH6uyUcSbwFswHfgZVeLcmF3sWkCuna4VgyVysfU1y2aB6ZZnjJ1CUoeA"
+      }
+    },
+    "shopping-agent-v2": {
+      "address": "oLBoaKP5vm1zHoyBYmpnETN5hsszGBeBaik3wze9SKm",
+      "keyFile": "shopping-agent-v2.json",
+      "multisig": {
+        "address": "DUPmqSMB1V2wBMZfSr93fPYgubpNaaa6e6wAxbX5cUhV",
+        "m": 2,
+        "signers": [
+          "7HTMgaG3vBkr9fKVgLg71iEz5TaNVTgQpZR5mqDFnbeg",
+          "7kemAvExKVKwtnqtJnJhuEmGs6MPodVY5mWu6FFAgNfZ",
+          "oLBoaKP5vm1zHoyBYmpnETN5hsszGBeBaik3wze9SKm"
+        ]
+      },
+      "vault": "5hpYPyKVsf9PeK1xz2Jd1RivuiBTVxPFVNkjw6BarjYp",
+      "setupTransactions": {
+        "createMultisig": "3JwYBneStqNBkaiVJtGVuzU8ZgEiZNyZWnw7vhthHPu7jUoiTFqwcomQ19fTugw7AG9zrAkxGWuCQaTkWSMHhV3V",
+        "createVault": "2T46x8Qq4qRUowbWPfLKFJNf9goyEnCSugKtsGHUDVaxEsYsp8JappMY2StoHXdyM3rLrwG5sr9NJgC2YcxrYEfM",
+        "mint": "61Bp2sXdXzLpYooRbGMjiWJ71DabnSh6J2QrgxwnCkiP9W3tmhLNFXsoT1sQ3mMtXxZ3RvXrVxiGnwzKiULh6BUK"
+      }
+    }
+  }
+}
