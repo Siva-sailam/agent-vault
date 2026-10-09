@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "setup": "node scripts/setup-v2.mjs",
-    "start": "node src/server.mjs"
+    "start": "node src/server.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@solana-program/system": "latest",
