@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "setup": "node scripts/setup-v2.mjs"
+    "setup": "node scripts/setup-v2.mjs",
+    "start": "node src/server.mjs"
   },
   "dependencies": {
     "@solana-program/system": "latest",
     "@solana-program/token": "latest",
-    "@solana/kit": "^8.3.0"
+    "@solana/kit": "^8.3.0",
+    "better-sqlite3": "^13.0.3"
   }
 }
