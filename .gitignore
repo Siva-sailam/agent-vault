@@ -25,3 +25,6 @@ test-ledger/
 
 # Claude Code local state / worktrees
 .claude/
+
+# V2 policy server SQLite data
+policy-server/data/
