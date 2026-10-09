@@ -44,6 +44,7 @@ SPL token delegation (`Approve`) and allowance-style approaches cap how much a d
 | `agent_vault/` | The Anchor program (Rust), its LiteSVM tests, and `Anchor.toml` |
 | `app/` | React + Vite front end: the owner control panel and a demo storefront |
 | `agent-service/` | Node service that holds the agent keys server-side and signs payments; also the scripted demo scenario |
+| `policy-server/` | V2: the off-chain policy server (SQLite rules, `/v2/authorize`, admin API), V2 setup script and tests |
 | `scripts/` | Devnet setup: aUSD token creation and metadata, keypair generation, preflight and state checks |
 
 Other files: `DEMO-VAULT.md` (devnet addresses), `DEMO-SCRIPT.md` (recording script), `NOTES.md` / `EXPORT.md` (build log and export).
@@ -83,7 +84,82 @@ cd agent_vault
 cargo test
 ```
 
-## Known limitations
+## V2 — off-chain policy engine
+
+Same controls as V1 (weekly budget, merchant allow-list, revoke), enforced by an off-chain **policy server before anything is signed**. Funds sit in an SPL Token **2-of-3 multisig** vault, so the server alone can't move them, and neither can the agent alone.
+
+```mermaid
+flowchart LR
+    Agent["Agent service<br/>(agent key, server-side)"] -->|"1. TransferChecked, partially signed<br/>+ intent {merchant, amount}"| Server["Policy server<br/>(SQLite rules + spend history)"]
+    Server -->|"2. verify the transaction itself,<br/>then rules: agent, revoked, merchant, budget"| Server
+    Server -.->|"refused: nothing signed,<br/>nothing sent, no fee"| Agent
+    Server -->|"3. co-sign, simulate, submit<br/>(server pays the fee)"| Chain["Solana"]
+    Chain --> Vault[("V2 vault token account<br/>owned by 2-of-3 multisig<br/>[owner, server, agent]")]
+    Vault -->|"TransferChecked"| Merchant["Merchant token account"]
+    Owner["Owner (Phantom)"] -.->|"recovery: owner + agent,<br/>server not involved"| Vault
+    Panel["Control panel"] -->|"admin API (localhost,<br/>unauthenticated)"| Server
+```
+
+**How a payment flows**
+
+1. The agent builds one `TransferChecked` (vault → merchant token account, authority = the multisig, signers = agent + server, fee payer = server), signs its part, and POSTs it to `/v2/authorize` with its stated intent.
+2. The server **decodes the transaction itself** and refuses unless it is exactly one Token Program `TransferChecked` from that agent's own V2 vault, with the right mint, decimals, multisig and signers, and with destination and amount equal to the intent (`TransactionMismatch`). It signs what it verified, never what it was told.
+3. Then, in order: agent signature valid and agent registered (`AgentNotFound`), not revoked (`AgentRevoked`), merchant on this agent's enabled allow-list (`MerchantNotAllowed`), amount within the remaining 7-day budget (`BudgetExceeded`). A replayed transaction is refused as `DuplicateTransaction`.
+4. On a pass, the spend is reserved as `pending` inside one SQLite transaction (so two concurrent requests can't both pass the budget check), then co-signed, simulated, submitted and confirmed. A failure releases the reservation.
+5. On a refusal nothing is signed or submitted, so there is no transaction and no fee. The refusal is still logged for the audit trail.
+
+**One multisig and one vault per agent.** With a single multisig shared by two agents, agent A + agent B would be a valid 2-of-3 and could move funds without the server. Each agent therefore has its own multisig `[owner, policy server, that agent]` and its own vault.
+
+**Recovery path (owner + agent, server not involved).** If the server is down, the control panel's "Recover funds" builds one `TransferChecked` from a vault to the owner's own aUSD account. Phantom signs first; the agent service then re-verifies the exact bytes (one `TransferChecked`, that agent's own vault, destination = the owner's aUSD account, correct mint/decimals, owner as fee payer, owner's signature present) and adds the agent's signature. Agent keys never reach the browser.
+
+### V1 vs V2
+
+| | V1 on-chain program | V2 off-chain policy server |
+|---|---|---|
+| Who decides | Vault program on Solana | Policy server, before signing |
+| Refused payment | Reaches chain, fails, fee paid | Never created, no fee |
+| Trust | No trusted operator | Must trust the server (+ multisig limits blast radius) |
+| Rule changes | On-chain transaction each | Instant, free, private |
+| Rule types | Fixed by deployed code | Add rules without a redeploy |
+| Chain-specific | Solana only | Pattern works on any chain |
+| Uptime | Chain uptime | Server down = no agent payments (owner+agent recovery) |
+
+V2 uses `TransferChecked` (V1 uses plain `Transfer`), which is what the x402 "exact" scheme requires. That removes V1's blocker for x402; it does not mean x402 is integrated.
+
+### V2 devnet addresses
+
+Public keys only (from `policy-server/v2.config.json`). Both agents use the same aUSD mint as V1.
+
+| Item | Address |
+|---|---|
+| Policy server (fee payer, multisig signer) | [`7kemAvExKVKwtnqtJnJhuEmGs6MPodVY5mWu6FFAgNfZ`](https://solscan.io/account/7kemAvExKVKwtnqtJnJhuEmGs6MPodVY5mWu6FFAgNfZ?cluster=devnet) |
+| food-ordering-agent-v2 | [`9TKrFoKECTzYxY94ipdSffMbnen1mdqSh27HhabsHM13`](https://solscan.io/account/9TKrFoKECTzYxY94ipdSffMbnen1mdqSh27HhabsHM13?cluster=devnet) |
+| food multisig / vault | [`HmzkKgLRwRUHNGcPbJvAofRU5ymUT4L5WNJK5h2Rcqcx`](https://solscan.io/account/HmzkKgLRwRUHNGcPbJvAofRU5ymUT4L5WNJK5h2Rcqcx?cluster=devnet) / [`2mJtH5JRAdRvcHoTP7BA6iaViC8MYn4P6nJnWTmYREFx`](https://solscan.io/account/2mJtH5JRAdRvcHoTP7BA6iaViC8MYn4P6nJnWTmYREFx?cluster=devnet) |
+| shopping-agent-v2 | [`oLBoaKP5vm1zHoyBYmpnETN5hsszGBeBaik3wze9SKm`](https://solscan.io/account/oLBoaKP5vm1zHoyBYmpnETN5hsszGBeBaik3wze9SKm?cluster=devnet) |
+| shopping multisig / vault | [`DUPmqSMB1V2wBMZfSr93fPYgubpNaaa6e6wAxbX5cUhV`](https://solscan.io/account/DUPmqSMB1V2wBMZfSr93fPYgubpNaaa6e6wAxbX5cUhV?cluster=devnet) / [`5hpYPyKVsf9PeK1xz2Jd1RivuiBTVxPFVNkjw6BarjYp`](https://solscan.io/account/5hpYPyKVsf9PeK1xz2Jd1RivuiBTVxPFVNkjw6BarjYp?cluster=devnet) |
+| Example live V2 payment (10 aUSD to Noonly) | [`2Mentzve…mkofc`](https://solscan.io/tx/2MentzveFzUnZAMwHRE7F4hvqg6zG69zRxwLHQ32FEcC2Bvr8vvJ7wcaD56HKDFakXdRe7DtqPUoZWjoHKCmkofc?cluster=devnet) |
+
+### Running V2
+
+```bash
+cd policy-server && npm install && npm run setup   # one-time, idempotent: keys, multisigs, vaults, 300 aUSD each
+npm start                                          # policy server on 127.0.0.1:4031
+cd ../agent-service && npm start                   # agent service on 127.0.0.1:4021 (npm run scenario:v2 for the scripted V2 demo)
+cd ../app && npm run dev                           # storefront has a V1 | V2 switch; control panel has a "V2 policy (off-chain)" card
+```
+
+Tests are local (mock RPC, in-memory database, no devnet): `cd policy-server && npm test` (17) and `cd agent-service && npm test` (10). They cover pass, `BudgetExceeded`, `MerchantNotAllowed`, `AgentRevoked`, `TransactionMismatch` (different merchant, different amount, extra instruction, and more), concurrent requests that exceed the budget (exactly one passes), cross-agent isolation, and recovery to the owner (passes) versus anywhere else (refused). The tests need the key files under `keys/`.
+
+### V2 known limitations
+
+- **Admin API is unauthenticated.** Revoke, unrevoke and merchant toggles on the policy server have no authentication; it is safe only because it binds to `127.0.0.1`. Next step: the owner signs admin changes with Phantom `signMessage`.
+- **Recovery's "only back to the owner" rule is enforced off-chain.** The agent service refuses to co-sign anything else, but the multisig itself would let owner + agent send funds anywhere. The recovery checks are covered by tests; the Phantom approval flow in the browser has not been exercised against devnet yet.
+- **Trust in the server.** It decides what gets signed. The multisig limits the damage (the server alone can't move funds), but a compromised server can still approve payments that satisfy the rules and refuse everything else.
+- **Server key is a plain key file.** Production would use an HSM or MPC custody (e.g. Fireblocks).
+- **Two scripted agents.** Same as V1, the agents are scripted, not AI models.
+- **Devnet only.**
+
+## Known limitations (V1)
 
 - **Devnet only.** Nothing here has been deployed to mainnet or audited.
 - **Single upgrade authority.** The program is upgradeable by one key. Whoever holds that key could deploy new program logic, so it is the real trust point. A production deployment would put it behind a multisig plus timelock, or make the program immutable.
@@ -94,7 +170,7 @@ cargo test
 ## Roadmap
 
 1. **V1: on-chain vault** (this repo)
-2. **V2:** off-chain policy engine
+2. **V2:** off-chain policy engine (this repo, branch `v2`)
 3. **V3:** x402 support
 4. **V4:** multi-chain
 
