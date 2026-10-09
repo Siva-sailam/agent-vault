@@ -9,6 +9,7 @@
     "agent": "node agent.mjs"
   },
   "dependencies": {
+    "@solana-program/token": "^0.17.0",
     "@solana/kit": "^8.3.0"
   }
 }

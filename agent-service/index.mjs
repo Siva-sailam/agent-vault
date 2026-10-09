@@ -34,6 +34,7 @@ import {
   createKeyPairSignerFromBytes,
 } from '@solana/kit';
 import { startServer } from './server.mjs';
+import { createV2Path, loadV2Config, v2NameOf } from './v2.mjs';
 import {
   getVaultPdas,
   getAssociatedTokenAddress,
@@ -148,6 +149,10 @@ async function main() {
     Uint8Array.from(JSON.parse(readFileSync(join(homedir(), '.config', 'solana', 'id.json'), 'utf8'))),
   );
 
+  // V2 (off-chain policy server) path — only if V2 was set up (policy-server/v2.config.json).
+  const v2Config = loadV2Config();
+  const v2 = v2Config ? await createV2Path({ rpc, v2: v2Config, merchantAtas }) : null;
+
   async function agentRules(name) {
     const info = await rpc.getAccountInfo(pdas.rules, { encoding: 'base64' }).send();
     if (!info.value) return null;
@@ -193,13 +198,46 @@ async function main() {
     return fields;
   }
 
+  /** V2: agent -> policy server -> (co-sign + submit). A refusal creates no transaction and costs no fee. */
+  async function spendV2(agentName, label, amount) {
+    const v2Name = v2NameOf(agentName);
+    console.log(`[V2] ${v2Name} ordering from ${label} — ${amount} ${symbol} via policy server...`);
+    const res = await v2.authorize(v2Name, label, amount);
+    const success = res.approved === true;
+    const budget = await v2.agentBudget(v2Name);
+    const solscanUrl = success ? `https://solscan.io/tx/${res.signature}?cluster=devnet` : null;
+    console.log(success ? `  ✓ approved + confirmed — ${solscanUrl}` : `  ✗ refused BEFORE SIGNING: ${res.reason}${res.detail ? ` (${res.detail})` : ''} — no transaction, no fee`);
+    console.log();
+    const fields = {
+      version: 'v2',
+      agent: agentName,
+      merchant: merchantKeyFor(label),
+      merchantLabel: label,
+      amount,
+      success,
+      reason: success ? null : res.reason,
+      detail: success ? null : (res.detail ?? null),
+      refusedBeforeSigning: !success && res.reason !== 'SubmissionFailed' && res.reason !== 'SimulationFailed',
+      signature: success ? res.signature : null,
+      solscanUrl,
+      spentSoFar: budget?.spent ?? null,
+      weeklyBudget: budget?.weeklyBudget ?? null,
+    };
+    emit('spend', fields);
+    return fields;
+  }
+
   /** Storefront order form → one agent payment. Validates input; a payment the
    * program refuses is NOT an error here — it is a result with a reason. */
-  function onOrder({ agent, merchant, amount }) {
+  function onOrder({ agent, merchant, amount, version = 'v1' }) {
     if (!agentSigners[agent]) throw new Error(`Unknown agent "${agent}"`);
     if (!config.merchants[merchant]) throw new Error(`Unknown merchant "${merchant}"`);
     const n = Number(amount);
     if (!Number.isInteger(n) || n < 1 || n > 1_000_000) throw new Error('Amount must be a whole number from 1 to 1,000,000');
+    if (version === 'v2') {
+      if (!v2?.signers[v2NameOf(agent)]) throw new Error(`No V2 setup for agent "${agent}"`);
+      return enqueue(() => spendV2(agent, merchant, n));
+    }
     return enqueue(() => spend(agent, merchant, n));
   }
 
@@ -212,6 +250,7 @@ async function main() {
     })),
     merchants: Object.keys(config.merchants),
     scenario: opts.scenario,
+    v2Agents: v2 ? Object.keys(config.agents).filter((n) => v2.signers[v2NameOf(n)]) : [],
   };
   const { emit, waitForContinue } = startServer(opts.port, { meta, onOrder });
 

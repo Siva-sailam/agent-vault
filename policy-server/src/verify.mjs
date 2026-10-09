@@ -56,18 +56,20 @@ export function verifyTransaction(b64, intent, cfg) {
   const idx = ix.accountIndices ?? [];
   if (idx.length !== 6) return mismatch('unexpected TransferChecked account list');
   const [source, mint, destination, authority, ...signers] = idx.map((i) => accounts[i]);
-  if (source !== cfg.vault) return mismatch('source is not the V2 vault');
+  // The source must be one of the V2 vaults; everything else is judged against THAT vault's
+  // own multisig and agent, so one agent can never move another agent's funds.
+  const vault = cfg.vaults[source];
+  if (!vault) return mismatch('source is not a V2 vault');
   if (mint !== cfg.mint) return mismatch('wrong mint');
   if (decimals !== cfg.decimals) return mismatch('wrong decimals');
-  if (authority !== cfg.multisig) return mismatch('authority is not the V2 multisig');
+  if (authority !== vault.multisig) return mismatch("authority is not this vault's multisig");
   if (destination !== intent.merchant) return mismatch('destination differs from intent');
   if (amount !== BigInt(intent.amount)) return mismatch('amount differs from intent');
 
-  // Exactly two multisig signers: the server and one multisig member (the agent).
-  if (!signers.includes(cfg.server)) return mismatch('server is not a signer of the transfer');
-  const agent = signers.find((s) => s !== cfg.server);
-  if (!agent || new Set(signers).size !== 2 || !cfg.multisigSigners.includes(agent))
-    return mismatch('transfer signers are not {server, multisig member}');
+  // Exactly two multisig signers: the server and THIS vault's agent.
+  const agent = vault.agent;
+  if (signers.length !== 2 || !signers.includes(cfg.server) || !signers.includes(agent))
+    return mismatch("transfer signers are not {server, this vault's agent}");
 
   // The transaction must require exactly those two signatures — nothing extra.
   const required = accounts.slice(0, numSignerAccounts);

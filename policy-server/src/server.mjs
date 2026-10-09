@@ -8,7 +8,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { address, createSolanaRpc } from '@solana/kit';
-import { fetchMaybeToken } from '@solana-program/token';
+import { fetchMaybeToken, findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
 import { DEVNET_URL, PORT, WINDOW_SECONDS, loadConfig, loadServerSigner } from './config.mjs';
 import { getState, openDb, seed } from './db.mjs';
 import { createAuthorizer } from './authorize.mjs';
@@ -22,32 +22,38 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
 
   if (dbFile !== ':memory:') mkdirSync(dirname(dbFile), { recursive: true });
   const db = openDb(dbFile);
-  const [agentName, agentEntry] = Object.entries(v2.agents)[0];
-  const food = demo.agents['food-ordering-agent'];
+  // One seeded agent per V2 agent entry, using the matching V1-demo agent's
+  // budget and merchant list (name minus the "-v2" suffix).
+  const v2Agents = Object.entries(v2.agents);
+  // demo-vault.config.json lists merchant WALLETS; payments go to their aUSD
+  // associated token accounts (same derivation as V1).
+  const merchantAta = {};
+  for (const [label, wallet] of Object.entries(demo.merchants)) {
+    [merchantAta[label]] = await findAssociatedTokenPda({ owner: address(wallet), mint: address(v2.mint), tokenProgram: TOKEN_PROGRAM_ADDRESS });
+  }
   seed(db, {
-    agents: [
-      {
-        pubkey: agentEntry.address,
-        name: agentName,
-        weeklyBudget: food.weeklyBudget,
-        merchants: food.merchants.map((label) => ({ label, tokenAccount: demo.merchants[label] })),
-      },
-    ],
+    agents: v2Agents.map(([name, entry]) => {
+      const demoAgent = demo.agents[name.replace(/-v2$/, '')];
+      return {
+        pubkey: entry.address,
+        name,
+        weeklyBudget: demoAgent.weeklyBudget,
+        merchants: demoAgent.merchants.map((label) => ({ label, tokenAccount: merchantAta[label] })),
+      };
+    }),
   });
 
   const cfg = {
     server: v2.policyServer.address,
-    vault: v2.vault,
     mint: v2.mint,
     decimals: v2.decimals,
-    multisig: v2.multisig.address,
-    multisigSigners: v2.multisig.signers,
+    vaults: Object.fromEntries(v2Agents.map(([, e]) => [e.vault, { agent: e.address, multisig: e.multisig.address }])),
   };
   const authorize = createAuthorizer({ db, cfg, serverSigner, rpc, windowSeconds: WINDOW_SECONDS });
 
-  async function vaultBalance() {
+  async function vaultBalance(vault) {
     try {
-      const acc = await fetchMaybeToken(rpc, address(v2.vault), { commitment: 'confirmed' });
+      const acc = await fetchMaybeToken(rpc, address(vault), { commitment: 'confirmed' });
       return acc.exists ? Number(acc.data.amount) : null;
     } catch {
       return null;
@@ -68,7 +74,13 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
     };
     if (req.method === 'POST' && url.pathname === '/v2/authorize') return send(200, await authorize(body));
     if (req.method === 'GET' && url.pathname === '/v2/state')
-      return send(200, { ...getState(db, WINDOW_SECONDS), vault: v2.vault, vaultBalance: await vaultBalance(), unauthenticatedAdmin: true });
+    {
+      const state = getState(db, WINDOW_SECONDS);
+      state.agents = await Promise.all(
+        state.agents.map(async (a) => ({ ...a, vault: v2.agents[a.name].vault, vaultBalance: await vaultBalance(v2.agents[a.name].vault) })),
+      );
+      return send(200, { ...state, unauthenticatedAdmin: true });
+    }
 
     let m = url.pathname.match(/^\/v2\/agents\/([1-9A-HJ-NP-Za-km-z]{32,44})\/(revoke|unrevoke)$/);
     if (req.method === 'POST' && m) {
