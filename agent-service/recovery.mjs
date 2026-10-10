@@ -3,8 +3,9 @@
 // If the policy server is down, the owner can still move funds out of an
 // agent's V2 vault: the vault's multisig is 2-of-3, and [owner, agent] is a
 // valid pair. The owner's wallet (Phantom) builds + signs ONE TransferChecked
-// back to the owner's own aUSD account; the AGENT'S signature comes from here,
-// because agent keys never go to the browser.
+// back to the owner's own aUSD account (the wallet may add ComputeBudget
+// limit/price instructions); the AGENT'S signature comes from here, because
+// agent keys never go to the browser.
 //
 // !! HONEST LIMIT: "funds can only go back to the owner" is enforced HERE, by
 // !! this service refusing to sign anything else — NOT on-chain. The multisig
@@ -33,6 +34,9 @@ const txDecoder = getTransactionDecoder();
 const msgDecoder = getCompiledTransactionMessageDecoder();
 const dataDecoder = getTransferCheckedInstructionDataDecoder();
 
+const COMPUTE_BUDGET_PROGRAM = 'ComputeBudget111111111111111111111111111111';
+const MAX_PRIORITY_MICROLAMPORTS = 1_000_000n;
+
 const refuse = (reason, detail) => ({ ok: false, reason, detail });
 
 export async function createRecovery({ v2, agentSigners }) {
@@ -53,8 +57,29 @@ export async function createRecovery({ v2, agentSigners }) {
     const accounts = message.staticAccounts;
     const { numSignerAccounts } = message.header;
     if (message.addressTableLookups?.length) return refuse('TransactionMismatch', 'address lookup tables not allowed');
-    if (message.instructions.length !== 1) return refuse('TransactionMismatch', `expected 1 instruction, got ${message.instructions.length}`);
-    const ix = message.instructions[0];
+    // Wallets (Phantom) prepend ComputeBudget instructions. Allow at most one of each, with a capped
+    // price; they cannot move funds. Exactly one TransferChecked must remain, and nothing else.
+    let ix = null, limitSeen = false, priceSeen = false;
+    for (const i of message.instructions) {
+      const program = accounts[i.programAddressIndex];
+      const d = i.data ?? new Uint8Array();
+      if (program === COMPUTE_BUDGET_PROGRAM) {
+        if (i.accountIndices?.length) return refuse('TransactionMismatch', 'unexpected ComputeBudget accounts');
+        if (d[0] === 2 && d.length === 5) {
+          if (limitSeen) return refuse('TransactionMismatch', 'duplicate SetComputeUnitLimit');
+          limitSeen = true;
+        } else if (d[0] === 3 && d.length === 9) {
+          if (priceSeen) return refuse('TransactionMismatch', 'duplicate SetComputeUnitPrice');
+          priceSeen = true;
+          if (new DataView(d.buffer, d.byteOffset, 9).getBigUint64(1, true) > MAX_PRIORITY_MICROLAMPORTS)
+            return refuse('TransactionMismatch', 'compute unit price above the allowed cap');
+        } else return refuse('TransactionMismatch', 'unsupported ComputeBudget instruction');
+      } else if (program === TOKEN_PROGRAM_ADDRESS) {
+        if (ix) return refuse('TransactionMismatch', 'expected exactly 1 token transfer');
+        ix = i;
+      } else return refuse('TransactionMismatch', `unexpected program ${program}`);
+    }
+    if (!ix) return refuse('TransactionMismatch', 'no token transfer');
     if (accounts[ix.programAddressIndex] !== TOKEN_PROGRAM_ADDRESS) return refuse('TransactionMismatch', 'not a Token Program instruction');
     const data = ix.data ?? new Uint8Array();
     if (data[0] !== TRANSFER_CHECKED_DISCRIMINATOR || data.length !== 10) return refuse('TransactionMismatch', 'not TransferChecked');

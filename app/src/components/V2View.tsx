@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { address, createNoopSigner, type Address } from '@solana/kit';
 import { getTransferCheckedInstruction } from '@solana-program/token';
 import type { AppClient } from '../providers';
-import { fetchTokenBalance } from '../lib/rpcHelpers';
+import { tryFetchTokenBalance } from '../lib/rpcHelpers';
 import { getAssociatedTokenAddress } from '../lib/program';
 import { solscanAccount } from '../lib/solscan';
 import type { useApprovalAction } from '../hooks/useApprovalAction';
@@ -25,8 +25,9 @@ function useBalances(client: AppClient, accounts: (Address | null)[], tick: numb
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const next = await Promise.all(accounts.map((a) => (a ? fetchTokenBalance(client.rpc, a) : Promise.resolve(null))));
-      if (!cancelled) setBalances(next);
+      const next = await Promise.all(accounts.map((a) => (a ? tryFetchTokenBalance(client.rpc, a) : Promise.resolve(null))));
+      // A failed read keeps the last good value instead of flashing 0.
+      if (!cancelled) setBalances((prev) => next.map((n, i) => n ?? prev[i] ?? null));
     };
     load();
     const id = setInterval(load, POLL_MS);

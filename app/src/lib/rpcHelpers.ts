@@ -21,3 +21,20 @@ export async function fetchTokenBalance(
     return 0n;
   }
 }
+
+/**
+ * Like fetchTokenBalance, but a transient RPC failure (rate limit, timeout) is
+ * `null` ("unknown"), not 0. Only a genuinely missing token account is 0.
+ */
+export async function tryFetchTokenBalance(
+  rpc: Rpc<GetTokenAccountBalanceApi>,
+  address: Address,
+): Promise<bigint | null> {
+  try {
+    const res = await rpc.getTokenAccountBalance(address).send();
+    return BigInt(res.value.amount);
+  } catch (err) {
+    const text = `${err instanceof Error ? err.message : ''} ${(err as { cause?: { message?: string } })?.cause?.message ?? ''}`;
+    return /could not find account|invalid param/i.test(text) ? 0n : null;
+  }
+}
