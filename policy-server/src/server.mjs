@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { address, createSolanaRpc } from '@solana/kit';
 import { fetchMaybeToken, findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
 import { DEVNET_URL, PORT, WINDOW_SECONDS, loadConfig, loadServerSigner } from './config.mjs';
-import { getState, openDb, seed } from './db.mjs';
+import { MAX_WEEKLY_BUDGET, getState, openDb, seed, setWeeklyBudget } from './db.mjs';
 import { createAuthorizer } from './authorize.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -86,6 +86,14 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
     if (req.method === 'POST' && m) {
       const r = setFlag[m[2]].run(m[1]);
       return r.changes ? send(200, { ok: true }) : send(404, { error: 'AgentNotFound' });
+    }
+    m = url.pathname.match(/^\/v2\/agents\/([1-9A-HJ-NP-Za-km-z]{32,44})\/budget$/);
+    if (req.method === 'POST' && m) {
+      const b = body?.weeklyBudget;
+      if (typeof b !== 'number' || !Number.isInteger(b) || b < 1 || b > MAX_WEEKLY_BUDGET)
+        return send(400, { error: 'InvalidBudget', detail: `weeklyBudget must be a whole number 1..${MAX_WEEKLY_BUDGET}` });
+      const r = setWeeklyBudget(db, m[1], b);
+      return r ? send(200, { ok: true, ...r }) : send(404, { error: 'AgentNotFound' });
     }
     m = url.pathname.match(/^\/v2\/merchants\/(\d+)\/(enable|disable)$/);
     if (req.method === 'POST' && m) {
