@@ -15,6 +15,7 @@ import {
   ixInitializeVault,
 } from '../lib/program';
 import { solscanAccount } from '../lib/solscan';
+import { BalanceHero } from './AgentCardParts';
 
 const SYM = ACTIVE_VAULT.symbol;
 
@@ -157,31 +158,19 @@ export function MainWalletCard({
 
   return (
     <div>
-      <div className="wallet-hero">
-        <div className="hero-top">
-          <span className="hero-chip">◎ {SYM}</span>
+      <BalanceHero
+        symbol={SYM}
+        pill={
           <span className="agents-active-pill">
             <span className="dot-live" />
             {vault.rules.agentCount} agent{vault.rules.agentCount === 1 ? '' : 's'} active
           </span>
-        </div>
-        <div className="hero-balances">
-          <div>
-            <p className="hero-label">Main wallet</p>
-            <p className="hero-amount">
-              {vault.ownerBalance.toString()}
-              <span>{SYM}</span>
-            </p>
-          </div>
-          <div>
-            <p className="hero-label">Vault</p>
-            <p className="hero-amount">
-              {vault.vaultBalance.toString()}
-              <span>{SYM}</span>
-            </p>
-          </div>
-        </div>
-      </div>
+        }
+        balances={[
+          { label: 'Main wallet', amount: vault.ownerBalance.toString() },
+          { label: 'Vault', amount: vault.vaultBalance.toString() },
+        ]}
+      />
 
       <div className="panel transfer-panel">
         <h2>Move money</h2>

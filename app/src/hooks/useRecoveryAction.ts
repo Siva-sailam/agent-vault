@@ -64,12 +64,12 @@ export function useRecoveryAction(client: AppClient) {
 
   const run = useCallback(
     async (agent: V2Agent, amount: number): Promise<boolean> => {
-      const label = `Recover ${amount} aUSD from ${agent.name}`;
+      const label = `Withdraw ${amount} aUSD from the ${agent.v1Name} vault to your wallet`;
       setState({ stage: 'awaiting-wallet', label });
       try {
         const payer = client.payer;
         assertIsTransactionModifyingSigner(payer);
-        if (payer.address !== v2.owner) throw new Error('Connect the vault owner wallet to recover funds.');
+        if (payer.address !== v2.owner) throw new Error('Connect the vault owner wallet to withdraw funds.');
         if (!Number.isInteger(amount) || amount < 1) throw new Error('Enter a whole number of aUSD.');
 
         const ownerAta = await getAssociatedTokenAddress(address(v2.owner), address(v2.mint));

@@ -37,6 +37,14 @@ export function openDb(file) {
       window_start INTEGER NOT NULL,
       spent        INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS rule_changes (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent      TEXT NOT NULL,
+      field      TEXT NOT NULL,
+      old_value  TEXT,
+      new_value  TEXT,
+      changed_at INTEGER NOT NULL
+    );
   `);
   return db;
 }
@@ -59,6 +67,27 @@ export function seed(db, { agents }) {
   })();
 }
 
+export const MAX_WEEKLY_BUDGET = 10000;
+
+/**
+ * Sets an agent's weekly budget and audits it, in ONE transaction. better-sqlite3
+ * is synchronous, so this cannot interleave with authorize's reservation.
+ * Takes effect on the current window as-is: spent is untouched (no clawback,
+ * no window reset), so remaining = new budget - spent (floored at 0 on display).
+ * Returns null for an unknown agent.
+ */
+export function setWeeklyBudget(db, pubkey, weeklyBudget) {
+  return db.transaction(() => {
+    const a = db.prepare('SELECT weekly_budget FROM agents WHERE pubkey = ?').get(pubkey);
+    if (!a) return null;
+    db.prepare('UPDATE agents SET weekly_budget = ? WHERE pubkey = ?').run(weeklyBudget, pubkey);
+    db.prepare(
+      'INSERT INTO rule_changes (agent, field, old_value, new_value, changed_at) VALUES (?,?,?,?,?)',
+    ).run(pubkey, 'weekly_budget', String(a.weekly_budget), String(weeklyBudget), now());
+    return { oldBudget: a.weekly_budget, weeklyBudget };
+  })();
+}
+
 export function getState(db, windowSeconds, recent = 25) {
   const t = now();
   const agents = db.prepare('SELECT * FROM agents').all().map((a) => {
@@ -74,7 +103,7 @@ export function getState(db, windowSeconds, recent = 25) {
       windowStart: elapsed ? t : (w?.window_start ?? t),
       windowEnd: (elapsed ? t : (w?.window_start ?? t)) + windowSeconds,
       spent,
-      remaining: a.weekly_budget - spent,
+      remaining: Math.max(a.weekly_budget - spent, 0),
     };
   });
   const merchants = db
@@ -82,5 +111,8 @@ export function getState(db, windowSeconds, recent = 25) {
     .all()
     .map((m) => ({ ...m, enabled: !!m.enabled }));
   const spends = db.prepare('SELECT * FROM spends ORDER BY id DESC LIMIT ?').all(recent);
-  return { agents, merchants, spends };
+  const ruleChanges = db
+    .prepare('SELECT id, agent, field, old_value AS oldValue, new_value AS newValue, changed_at AS changedAt FROM rule_changes ORDER BY id DESC LIMIT 20')
+    .all();
+  return { agents, merchants, spends, ruleChanges };
 }

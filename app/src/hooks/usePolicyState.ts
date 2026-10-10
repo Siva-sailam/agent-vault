@@ -17,6 +17,9 @@ export type PolicyAgent = {
 export type PolicyMerchant = { id: number; agent: string; tokenAccount: string; label: string; enabled: boolean };
 export type PolicyState = { agents: PolicyAgent[]; merchants: PolicyMerchant[] };
 
+/** Result of a budget change: `error` is the server's text when it refused. */
+export type BudgetResult = { ok: true } | { ok: false; error: string };
+
 /**
  * Polls the V2 policy server's state. `online` is false when it can't be
  * reached (payments pause; recovery still works). The admin calls are
@@ -50,5 +53,26 @@ export function usePolicyState(pollMs = 3000) {
     [refresh],
   );
 
-  return { state, online, refresh, admin };
+  const setBudget = useCallback(
+    async (pubkey: string, weeklyBudget: number): Promise<BudgetResult> => {
+      try {
+        const res = await fetch(`${POLICY_SERVER_URL}/v2/agents/${pubkey}/budget`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weeklyBudget }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          return { ok: false, error: body.detail ?? body.error ?? `HTTP ${res.status}` };
+        }
+        await refresh();
+        return { ok: true };
+      } catch {
+        return { ok: false, error: 'Policy server unavailable on :4031' };
+      }
+    },
+    [refresh],
+  );
+
+  return { state, online, refresh, admin, setBudget };
 }
