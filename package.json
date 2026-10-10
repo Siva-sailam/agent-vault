@@ -1,0 +1,10 @@
+{
+  "name": "agent-vault",
+  "private": true,
+  "scripts": {
+    "start:all": "concurrently --kill-others-on-fail --names policy,agent,app --prefix-colors cyan,magenta,yellow \"npm --prefix policy-server start\" \"npm --prefix agent-service start\" \"npm --prefix app run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "10.0.5"
+  }
+}

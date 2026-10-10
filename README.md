@@ -150,6 +150,15 @@ cd ../app && npm run dev                           # storefront and control pane
 
 Tests are local (mock RPC, in-memory database, no devnet): `cd policy-server && npm test` (30) and `cd agent-service && npm test` (10). They cover pass, `BudgetExceeded`, `MerchantNotAllowed`, `AgentRevoked`, `TransactionMismatch` (different merchant, different amount, extra instruction, and more), concurrent requests that exceed the budget (exactly one passes), editable weekly limits (raise, lower below spent, invalid values, audit rows, racing an authorize), admin auth (no session = 401, wrong key, replay, expiry), cross-agent isolation, and recovery to the owner (passes) versus anywhere else (refused). The tests need the key files under `keys/`.
 
+### Run everything
+
+```bash
+npm install          # once, at the repo root (also run npm install in policy-server, agent-service and app the first time)
+npm run start:all    # policy server + agent service + app, colour-coded; if one crashes, all stop
+```
+
+Then open the control panel at http://localhost:5173/ and the storefront at http://localhost:5173/storefront.html (Vite prints the actual port if 5173 is taken). The V2 one-time `npm run setup` in `policy-server` still applies on a fresh checkout.
+
 ### V2 control panel and admin API
 
 The control panel has a V1 | V2 switch (default V2 on every load). V2 uses the same cards and styling as V1, driven by the policy server's `GET /v2/state`; V2 cards carry a small "V2 · off-chain policy" tag.
