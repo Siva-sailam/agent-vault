@@ -6,12 +6,22 @@ const spent = (db, agent) => db.prepare('select spent from windows where agent =
 const changes = (db) => db.prepare('select * from rule_changes order by id').all();
 const budgetOf = (db, agent) => db.prepare('select weekly_budget b from agents where pubkey = ?').get(agent.address).b;
 
-/** Calls the real HTTP handler on an ephemeral localhost port. */
+/** Calls the real HTTP handler on an ephemeral localhost port, signed in as the owner. */
 async function http(t, path, body) {
   if (!t.server.listening) await new Promise((r) => t.server.listen(0, '127.0.0.1', r));
-  const res = await fetch(`http://127.0.0.1:${t.server.address().port}${path}`, {
+  const base = `http://127.0.0.1:${t.server.address().port}`;
+  const headers = { 'Content-Type': 'application/json' };
+  if (path !== '/v2/state') {
+    if (!t.token) {
+      const c = await (await fetch(`${base}/v2/admin/challenge`)).json();
+      const signature = await t.signAs(c.message);
+      t.token = (await (await fetch(`${base}/v2/admin/session`, { method: 'POST', headers, body: JSON.stringify({ nonce: c.nonce, signature }) })).json()).token;
+    }
+    headers.Authorization = `Bearer ${t.token}`;
+  }
+  const res = await fetch(base + path, {
     method: path === '/v2/state' ? 'GET' : 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   return { status: res.status, json: await res.json() };

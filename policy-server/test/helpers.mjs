@@ -8,6 +8,10 @@ import {
   createKeyPairSignerFromBytes,
   createNoopSigner,
   createTransactionMessage,
+  generateKeyPair,
+  getAddressFromPublicKey,
+  getBase64Decoder,
+  signBytes,
   getBase64EncodedWireTransaction,
   partiallySignTransactionMessageWithSigners,
   pipe,
@@ -36,7 +40,9 @@ export function mockRpc({ simErr = null } = {}) {
 
 export async function makeApp(rpcOpts) {
   const rpc = mockRpc(rpcOpts);
-  const app = await buildApp({ dbFile: ':memory:', rpc });
+  // A throwaway "owner" so tests can sign admin challenges like Phantom would.
+  const ownerKeys = await generateKeyPair();
+  const app = await buildApp({ dbFile: ':memory:', rpc, owner: await getAddressFromPublicKey(ownerKeys.publicKey) });
   const { db, cfg } = app;
   const entryOf = (agent) => Object.entries(cfg.vaults).find(([, v]) => v.agent === agent.address);
   const [foodVault, foodV] = entryOf(food);
@@ -60,5 +66,7 @@ export async function makeApp(rpcOpts) {
   /** An honest request: the transaction matches the intent (food agent unless overridden). */
   const ask = async (label = 'Noonly', amount = 20, opts = {}) =>
     app.authorize({ transaction: await build({ dest: ata(label), amount: BigInt(amount), ...opts }), intent: { merchant: ata(label), amount } });
-  return { ...app, rpc, ata, build, ask, foodVault, foodV, shopVault, shopV, food, shopper };
+  /** Signs a challenge message with the test owner key; returns base64 like the panel sends. */
+  const signAs = async (keys, message) => getBase64Decoder().decode(await signBytes(keys.privateKey, new TextEncoder().encode(message)));
+  return { ...app, rpc, ownerKeys, signAs: (m) => signAs(ownerKeys, m), signWith: signAs, ata, build, ask, foodVault, foodV, shopVault, shopV, food, shopper };
 }

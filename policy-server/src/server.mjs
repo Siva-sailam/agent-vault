@@ -1,8 +1,7 @@
 // Policy server: POST /v2/authorize + localhost-only admin API.
 //
-// !! The admin API is UNAUTHENTICATED in this milestone. It is safe only
-// !! because it binds to 127.0.0.1. Next milestone: the owner signs admin
-// !! changes with Phantom signMessage.
+// Admin writes need a session obtained by the owner signing a challenge with
+// Phantom signMessage (see adminAuth.mjs). Reads (/v2/state) stay open.
 import { createServer } from 'node:http';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,10 +11,11 @@ import { fetchMaybeToken, findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '
 import { DEVNET_URL, PORT, WINDOW_SECONDS, loadConfig, loadServerSigner } from './config.mjs';
 import { MAX_WEEKLY_BUDGET, getState, openDb, seed, setWeeklyBudget } from './db.mjs';
 import { createAuthorizer } from './authorize.mjs';
+import { createAdminAuth } from './adminAuth.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlite'), rpc = createSolanaRpc(DEVNET_URL) } = {}) {
+export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlite'), rpc = createSolanaRpc(DEVNET_URL), owner } = {}) {
   const { v2, demo } = loadConfig();
   const serverSigner = await loadServerSigner(v2);
   if (serverSigner.address !== v2.policyServer.address) throw new Error('server key does not match v2.config.json');
@@ -49,6 +49,7 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
     decimals: v2.decimals,
     vaults: Object.fromEntries(v2Agents.map(([, e]) => [e.vault, { agent: e.address, multisig: e.multisig.address }])),
   };
+  const adminAuth = createAdminAuth({ owner: owner ?? v2.owner });
   const authorize = createAuthorizer({ db, cfg, serverSigner, rpc, windowSeconds: WINDOW_SECONDS });
 
   async function vaultBalance(vault) {
@@ -79,8 +80,15 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
       state.agents = await Promise.all(
         state.agents.map(async (a) => ({ ...a, vault: v2.agents[a.name].vault, vaultBalance: await vaultBalance(v2.agents[a.name].vault) })),
       );
-      return send(200, { ...state, unauthenticatedAdmin: true });
+      return send(200, state);
     }
+    if (req.method === 'GET' && url.pathname === '/v2/admin/challenge') return send(200, adminAuth.challenge());
+    if (req.method === 'POST' && url.pathname === '/v2/admin/session') {
+      const s = await adminAuth.login(body);
+      return s ? send(200, s) : send(401, { error: 'InvalidSignature' });
+    }
+    // Everything below changes rules: owner session required.
+    if (req.method === 'POST' && !adminAuth.authorized(req)) return send(401, { error: 'Unauthorized' });
 
     let m = url.pathname.match(/^\/v2\/agents\/([1-9A-HJ-NP-Za-km-z]{32,44})\/(revoke|unrevoke)$/);
     if (req.method === 'POST' && m) {
@@ -107,7 +115,7 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
     // Open CORS like the V1 agent service: localhost-only, devnet public data.
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') return res.writeHead(204).end();
     const chunks = [];
     let size = 0;
@@ -133,5 +141,5 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { server } = await buildApp();
-  server.listen(PORT, '127.0.0.1', () => console.log(`policy server on http://127.0.0.1:${PORT} (admin API UNAUTHENTICATED, localhost only)`));
+  server.listen(PORT, '127.0.0.1', () => console.log(`policy server on http://127.0.0.1:${PORT} (admin writes need an owner-signed session; localhost only)`));
 }
