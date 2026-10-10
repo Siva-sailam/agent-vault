@@ -11,7 +11,9 @@ import { CardCarousel } from './components/CardCarousel';
 import { useVaultState } from './hooks/useVaultState';
 import { useApprovalAction } from './hooks/useApprovalAction';
 import { useRecoveryAction } from './hooks/useRecoveryAction';
-import { V2Card } from './components/V2Card';
+import { V2MainCard, V2AgentCard } from './components/V2View';
+import { usePolicyState } from './hooks/usePolicyState';
+import v2Vaults from './lib/v2-vaults.json';
 import { ACTIVE_VAULT, agentNameFor, merchantKeyOf, merchantLabelsFor } from './vaults';
 import { getAssociatedTokenAddress } from './lib/program';
 import type { AppClient } from './providers';
@@ -48,6 +50,10 @@ function Dashboard({ client }: { client: AppClient }) {
   const approval = useApprovalAction(client);
   const recovery = useRecoveryAction(client);
   const merchants = useMerchantRefs(MINT);
+  const policy = usePolicyState();
+  // Default is V2 on every page load (deliberately not remembered).
+  const [version, setVersion] = useState<'v1' | 'v2'>('v2');
+  const [tick, setTick] = useState(0);
 
   if (!connected) {
     return (
@@ -83,7 +89,10 @@ function Dashboard({ client }: { client: AppClient }) {
       />
     )),
   ];
-  pages.push(<V2Card client={client} recovery={recovery} />);
+  const v2Pages = [
+    <V2MainCard client={client} approval={approval} recovery={recovery} tick={tick} onMoved={() => setTick((t) => t + 1)} />,
+    ...v2Vaults.agents.map((a) => <V2AgentCard key={a.address} agent={a} policy={policy} />),
+  ];
 
   return (
     <div className="phone-content">
@@ -91,7 +100,20 @@ function Dashboard({ client }: { client: AppClient }) {
         <h1>Vault</h1>
         <span className="wallet-address">{connected.account.address.slice(0, 4)}…{connected.account.address.slice(-4)}</span>
       </div>
-      <CardCarousel pages={pages} />
+      <div className="panel-seg" role="tablist" aria-label="Rules enforced by">
+        <button className={version === 'v1' ? 'on' : ''} onClick={() => setVersion('v1')} role="tab" aria-selected={version === 'v1'}>
+          V1
+        </button>
+        <button className={version === 'v2' ? 'on' : ''} onClick={() => setVersion('v2')} role="tab" aria-selected={version === 'v2'}>
+          V2
+        </button>
+      </div>
+      <p className="panel-seg-sub">
+        {version === 'v1'
+          ? 'Rules on-chain. Changes need a Phantom signature.'
+          : 'Rules off-chain in the policy server. Changes are instant and free.'}
+      </p>
+      <CardCarousel key={version} pages={version === 'v1' ? pages : v2Pages} />
       <ApprovalModal state={approval.state} onClose={approval.dismiss} />
       <ApprovalModal state={recovery.state} onClose={recovery.dismiss} />
     </div>
