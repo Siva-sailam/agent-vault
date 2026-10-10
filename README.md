@@ -97,7 +97,7 @@ flowchart LR
     Chain --> Vault[("V2 vault token account<br/>owned by 2-of-3 multisig<br/>[owner, server, agent]")]
     Vault -->|"TransferChecked"| Merchant["Merchant token account"]
     Owner["Owner (Phantom)"] -.->|"recovery: owner + agent,<br/>server not involved"| Vault
-    Panel["Control panel"] -->|"admin API (localhost,<br/>unauthenticated)"| Server
+    Panel["Control panel"] -->|"admin API (localhost,<br/>owner-signed session)"| Server
 ```
 
 **How a payment flows**
@@ -148,24 +148,23 @@ cd ../agent-service && npm start                   # agent service on 127.0.0.1:
 cd ../app && npm run dev                           # storefront and control panel both have a V1 | V2 switch (panel defaults to V2)
 ```
 
-Tests are local (mock RPC, in-memory database, no devnet): `cd policy-server && npm test` (24) and `cd agent-service && npm test` (10). They cover pass, `BudgetExceeded`, `MerchantNotAllowed`, `AgentRevoked`, `TransactionMismatch` (different merchant, different amount, extra instruction, and more), concurrent requests that exceed the budget (exactly one passes), editable weekly limits (raise, lower below spent, invalid values, audit rows, racing an authorize), cross-agent isolation, and recovery to the owner (passes) versus anywhere else (refused). The tests need the key files under `keys/`.
+Tests are local (mock RPC, in-memory database, no devnet): `cd policy-server && npm test` (30) and `cd agent-service && npm test` (10). They cover pass, `BudgetExceeded`, `MerchantNotAllowed`, `AgentRevoked`, `TransactionMismatch` (different merchant, different amount, extra instruction, and more), concurrent requests that exceed the budget (exactly one passes), editable weekly limits (raise, lower below spent, invalid values, audit rows, racing an authorize), admin auth (no session = 401, wrong key, replay, expiry), cross-agent isolation, and recovery to the owner (passes) versus anywhere else (refused). The tests need the key files under `keys/`.
 
 ### V2 control panel and admin API
 
 The control panel has a V1 | V2 switch (default V2 on every load). V2 uses the same cards and styling as V1, driven by the policy server's `GET /v2/state`; V2 cards carry a small "V2 · off-chain policy" tag.
 
-Admin API (localhost only, unauthenticated):
+Admin API (localhost only). Reads and `/v2/authorize` are open; every other `POST` needs an owner session (see below):
 
 | Endpoint | Effect |
 |---|---|
+| `GET /v2/admin/challenge`, `POST /v2/admin/session` | Sign-in: get a challenge, return the owner's signature, receive a session token |
 | `GET /v2/state` | Agents, merchants, recent spends, last 20 `ruleChanges` |
 | `POST /v2/agents/:pubkey/revoke` / `unrevoke` | Block / unblock an agent |
 | `POST /v2/merchants/:id/enable` / `disable` | Toggle a merchant for its agent |
 | `POST /v2/agents/:pubkey/budget` | Set the weekly limit, body `{"weeklyBudget": 500}` |
 
-```bash
-curl -s -X POST http://127.0.0.1:4031/v2/agents/<AGENT_PUBKEY>/budget -H 'Content-Type: application/json' -d '{"weeklyBudget":500}'
-```
+**Admin auth (Phantom `signMessage`).** The first rule change in the panel asks Phantom to sign a short text message (no transaction, no fee). The server issues that text itself (it names the owner, a one-time nonce and an expiry), checks the ed25519 signature against the owner address in `v2.config.json`, and returns a random token valid for 30 minutes. The panel keeps the token in memory only and sends it as `Authorization: Bearer …`; a page reload or server restart asks you to sign again. Challenges are single-use and expire after 2 minutes. A session can change rules but cannot move funds. Because the signature comes from a wallet, plain `curl` can no longer change rules; use the panel.
 
 **Weekly limit semantics.** The value must be a whole number from 1 to 10000 (aUSD has 0 decimals), otherwise `400 InvalidBudget`; an unknown agent gives `404 AgentNotFound`.
 
@@ -184,7 +183,7 @@ Out of scope in V2: creating a vault and adding a new agent (V2 has two fixed ag
 
 ### V2 known limitations
 
-- **Admin API is unauthenticated.** Revoke, unrevoke, merchant toggles and weekly-limit changes on the policy server have no authentication. It is safe only because it binds to `127.0.0.1`, but anyone on this machine could raise a limit. Next step: the owner signs admin changes with Phantom `signMessage`.
+- **Admin auth is session-based, not per-action.** One Phantom signature opens a 30-minute session; anything that gets the token (for example malicious JavaScript on the panel page) can change rules until it expires. Reads are still open on localhost. A stricter option is to sign every change; it costs a Phantom popup per toggle.
 - **Recovery's "only back to the owner" rule is enforced off-chain.** The agent service refuses to co-sign anything else, but the multisig itself would let owner + agent send funds anywhere. The recovery checks are covered by tests; the Phantom flows for Deposit and Withdraw have been click-tested on devnet by the owner.
 - **Trust in the server.** It decides what gets signed. The multisig limits the damage (the server alone can't move funds), but a compromised server can still approve payments that satisfy the rules and refuse everything else.
 - **Server key is a plain key file.** Production would use an HSM or MPC custody (e.g. Fireblocks).

@@ -208,6 +208,7 @@ export function V2AgentCard({ agent, policy }: { agent: V2Agent; policy: Policy 
               {merchants.map((m) => (
                 <MerchantRow key={m.id} label={m.label} isOn={m.enabled} pending={false} onToggle={() => policy.admin(`/v2/merchants/${m.id}/${m.enabled ? 'disable' : 'enable'}`)} />
               ))}
+              {policy.adminError && <p className="hint" style={{ color: 'var(--danger)' }}>{policy.adminError}</p>}
             </div>
           </>
         ) : (

@@ -50,7 +50,7 @@ function Dashboard({ client }: { client: AppClient }) {
   const approval = useApprovalAction(client);
   const recovery = useRecoveryAction(client);
   const merchants = useMerchantRefs(MINT);
-  const policy = usePolicyState();
+  const policy = usePolicyState(3000, (m) => client.wallet.signMessage(m));
   // Default is V2 on every page load (deliberately not remembered).
   const [version, setVersion] = useState<'v1' | 'v2'>('v2');
   const [tick, setTick] = useState(0);
