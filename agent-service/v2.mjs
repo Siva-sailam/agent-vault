@@ -6,7 +6,7 @@
 // submitted, and no fee was paid.
 //
 // Only the AGENT'S key is read here. Server and owner keys never are.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -40,11 +40,13 @@ export function loadV2Config() {
 /** "food-ordering-agent" -> "food-ordering-agent-v2" */
 export const v2NameOf = (v1Name) => `${v1Name}-v2`;
 
-export async function createV2Path({ rpc, v2, merchantAtas }) {
+/** skipMissing (--v2-only): agents whose key file isn't in keysDir are left out instead of failing. */
+export async function createV2Path({ rpc, v2, merchantAtas, keysDir = KEYS_DIR, skipMissing = false }) {
   const signers = {};
   for (const [name, entry] of Object.entries(v2.agents)) {
+    if (skipMissing && !existsSync(join(keysDir, entry.keyFile))) continue;
     signers[name] = await createKeyPairSignerFromBytes(
-      Uint8Array.from(JSON.parse(readFileSync(join(KEYS_DIR, entry.keyFile), 'utf8'))),
+      Uint8Array.from(JSON.parse(readFileSync(join(keysDir, entry.keyFile), 'utf8'))),
     );
     if (signers[name].address !== entry.address) throw new Error(`${name}: key file does not match v2.config.json`);
   }

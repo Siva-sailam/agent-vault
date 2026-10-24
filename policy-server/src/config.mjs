@@ -10,6 +10,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const ROOT = join(here, '..', '..');
 export const KEYS_DIR = join(homedir(), 'agent-vault', 'keys');
 export const PORT = 4031;
+/** Listen address. Loopback unless POLICY_HOST says otherwise (e.g. 0.0.0.0 on a server). */
+export const resolveHost = (env = process.env) => env.POLICY_HOST?.trim() || '127.0.0.1';
 export const WINDOW_SECONDS = 7 * 24 * 60 * 60;
 export const DEVNET_URL = 'https://api.devnet.solana.com';
 

@@ -14,9 +14,11 @@
 //     on-chain; the storefront's Continue button is a manual override.
 //
 // Usage:
-//   node index.mjs [--config <file>] [--scenario [--v2]] [--agent <name>] [--port <port>] [--check]
+//   node index.mjs [--config <file>] [--scenario [--v2]] [--v2-only] [--agent <name>] [--port <port>] [--check]
 // Defaults: --config demo-vault.config.json --port 4021; scenario agent = the
-// config's scenario.agent. --check loads the config and prints the plan,
+// config's scenario.agent. --v2-only reads ONLY the V2 agent keys that exist
+// in the keys dir (no V1 agent keys, no CLI wallet); V1 orders are refused and
+// no transactions are sent at startup. --check loads the config and prints the plan,
 // sends nothing. Use --config vault-b.config.json for the original Vault B.
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -52,7 +54,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  const opts = { config: 'demo-vault.config.json', agent: null, port: 4021, check: false, scenario: false, v2: false };
+  const opts = { config: 'demo-vault.config.json', agent: null, port: 4021, check: false, scenario: false, v2: false, v2Only: false };
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--scenario') opts.scenario = true;
     else if (args[i] === '--config') opts.config = args[++i];
@@ -60,6 +62,7 @@ function parseArgs() {
     else if (args[i] === '--port') opts.port = Number(args[++i]);
     else if (args[i] === '--check') opts.check = true;
     else if (args[i] === '--v2') opts.v2 = true;
+    else if (args[i] === '--v2-only') opts.v2Only = true;
   }
   return opts;
 }
@@ -143,18 +146,34 @@ async function main() {
 
   const rpc = createSolanaRpc(DEVNET_URL);
 
-  // Every agent's key is read into this process only; never logged or served.
-  const agentSigners = {};
-  for (const [name, entry] of Object.entries(config.agents)) {
-    agentSigners[name] = await createKeyPairSignerFromBytes(readKeypairBytes(keyFileOf(entry)));
-  }
-  const feePayerSigner = await createKeyPairSignerFromBytes(
-    Uint8Array.from(JSON.parse(readFileSync(join(homedir(), '.config', 'solana', 'id.json'), 'utf8'))),
-  );
+  const V1_DISABLED = 'V1 is disabled: agent service is running with --v2-only';
+  if (opts.v2Only && !opts.v2 && opts.scenario) throw new Error('--v2-only scenarios need --v2');
 
   // V2 (off-chain policy server) path — only if V2 was set up (policy-server/v2.config.json).
   const v2Config = loadV2Config();
-  const v2 = v2Config ? await createV2Path({ rpc, v2: v2Config, merchantAtas }) : null;
+  if (opts.v2Only && !v2Config) throw new Error('--v2-only needs policy-server/v2.config.json');
+  const v2 = v2Config ? await createV2Path({ rpc, v2: v2Config, merchantAtas, skipMissing: opts.v2Only }) : null;
+
+  // Every agent's key is read into this process only; never logged or served.
+  // --v2-only: the V1 key files and the CLI wallet are never opened; agents are
+  // the V2 signers that were found, keyed by their V1 name.
+  const agentSigners = {};
+  let feePayerSigner = null;
+  if (opts.v2Only) {
+    for (const name of Object.keys(config.agents)) {
+      const s = v2.signers[v2NameOf(name)];
+      if (s) agentSigners[name] = s;
+    }
+    if (Object.keys(agentSigners).length === 0) throw new Error('--v2-only: no V2 agent keys found in the keys dir');
+    if (opts.scenario && !agentSigners[scenarioAgent]) throw new Error(`--v2-only: no V2 key for scenario agent "${scenarioAgent}"`);
+  } else {
+    for (const [name, entry] of Object.entries(config.agents)) {
+      agentSigners[name] = await createKeyPairSignerFromBytes(readKeypairBytes(keyFileOf(entry)));
+    }
+    feePayerSigner = await createKeyPairSignerFromBytes(
+      Uint8Array.from(JSON.parse(readFileSync(join(homedir(), '.config', 'solana', 'id.json'), 'utf8'))),
+    );
+  }
   if (opts.v2 && !v2?.signers[v2NameOf(scenarioAgent)]) throw new Error(`--v2 needs a V2 setup for "${scenarioAgent}"`);
 
   async function agentRules(name) {
@@ -174,6 +193,7 @@ async function main() {
   };
 
   async function spend(agentName, label, amount) {
+    if (opts.v2Only) throw new Error(V1_DISABLED);
     console.log(`${agentName} ordering from ${label} — ${amount} ${symbol}...`);
     const ix = ixAgentSpend(agentSigners[agentName], pdas.rules, pdas.vault, pdas.vaultAuthority, merchantAtas[label], BigInt(amount));
     const signature = await sendInstructions(rpc, feePayerSigner, [ix]);
@@ -240,6 +260,7 @@ async function main() {
     if (!config.merchants[merchant]) throw new Error(`Unknown merchant "${merchant}"`);
     const n = Number(amount);
     if (!Number.isInteger(n) || n < 1 || n > 1_000_000) throw new Error('Amount must be a whole number from 1 to 1,000,000');
+    if (version !== 'v2' && opts.v2Only) throw new Error(V1_DISABLED);
     if (version === 'v2') {
       if (!v2?.signers[v2NameOf(agent)]) throw new Error(`No V2 setup for agent "${agent}"`);
       return enqueue(() => spendV2(agent, merchant, n));
@@ -265,7 +286,7 @@ async function main() {
     onRecoveryCosign: recovery ? (body) => recovery.cosign(body) : null,
   });
 
-  console.log('Fee payer:  ', feePayerSigner.address);
+  if (feePayerSigner) console.log('Fee payer:  ', feePayerSigner.address);
   for (const [name, s] of Object.entries(agentSigners)) console.log(`Agent ${name}:`.padEnd(13), s.address);
   console.log();
 
@@ -276,7 +297,9 @@ async function main() {
     const info = await rpc.getAccountInfo(ata, { encoding: 'base64' }).send();
     if (!info.value) missing.push(label);
   }
-  if (missing.length > 0) {
+  if (missing.length > 0 && opts.v2Only) {
+    console.log(`--v2-only: not creating ${missing.length} missing merchant token account(s) (${missing.join(', ')}); V2 payments to them will fail until they exist.`);
+  } else if (missing.length > 0) {
     console.log(`Creating ${missing.length} missing merchant token account(s) (idempotent)...`);
     const ensureIxs = missing.map((label) =>
       ixEnsureAssociatedTokenAccount(feePayerSigner, address(config.merchants[label]), mint, merchantAtas[label]),

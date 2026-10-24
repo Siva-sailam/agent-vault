@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { address, createSolanaRpc } from '@solana/kit';
 import { fetchMaybeToken, findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
-import { DEVNET_URL, PORT, WINDOW_SECONDS, loadConfig, loadServerSigner } from './config.mjs';
+import { DEVNET_URL, PORT, WINDOW_SECONDS, loadConfig, loadServerSigner, resolveHost } from './config.mjs';
 import { MAX_WEEKLY_BUDGET, getState, openDb, seed, setWeeklyBudget } from './db.mjs';
 import { createAuthorizer } from './authorize.mjs';
 import { createAdminAuth } from './adminAuth.mjs';
@@ -141,5 +141,6 @@ export async function buildApp({ dbFile = join(here, '..', 'data', 'policy.sqlit
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { server } = await buildApp();
-  server.listen(PORT, '127.0.0.1', () => console.log(`policy server on http://127.0.0.1:${PORT} (admin writes need an owner-signed session; localhost only)`));
+  const host = resolveHost();
+  server.listen(PORT, host, () => console.log(`policy server on http://${host}:${PORT} (admin writes need an owner-signed session)`));
 }
