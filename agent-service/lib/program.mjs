@@ -15,16 +15,17 @@ import {
   getU64Encoder,
   getProgramDerivedAddress,
 } from '@solana/kit';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // The program's own generated IDL — single source of truth for
 // discriminators and error codes/messages, same file the front end copies.
-const idl = JSON.parse(
-  readFileSync(join(__dirname, '..', '..', 'agent_vault', 'target', 'idl', 'agent_vault.json'), 'utf8'),
-);
+// target/idl is a build artifact (not in git); fall back to the committed copy.
+const builtIdl = join(__dirname, '..', '..', 'agent_vault', 'target', 'idl', 'agent_vault.json');
+const committedIdl = join(__dirname, '..', '..', 'app', 'src', 'idl', 'agent_vault.json');
+const idl = JSON.parse(readFileSync(existsSync(builtIdl) ? builtIdl : committedIdl, 'utf8'));
 
 export const PROGRAM_ADDRESS = address('B4YLQmwWCt8fPu23hhpEeV4LZSkoKHsWQtWk15kc8Ajj');
 export const TOKEN_PROGRAM_ADDRESS = address('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');

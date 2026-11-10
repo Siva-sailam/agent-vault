@@ -48,7 +48,7 @@ import {
   programErrorInfo,
 } from './lib/program.mjs';
 
-const DEVNET_URL = 'https://api.devnet.solana.com';
+const DEVNET_URL = process.env.AGENT_SERVICE_RPC_URL ?? 'https://api.devnet.solana.com'; // override is for offline tests
 const KEYS_DIR = join(homedir(), 'agent-vault', 'keys');
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -270,7 +270,7 @@ async function main() {
 
   const meta = {
     symbol,
-    agents: Object.keys(config.agents).map((name) => ({
+    agents: Object.keys(config.agents).filter((name) => agentSigners[name]).map((name) => ({
       name,
       address: agentSigners[name].address,
       merchants: config.agents[name].merchants ?? Object.keys(config.merchants),
